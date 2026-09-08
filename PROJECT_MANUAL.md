@@ -751,6 +751,15 @@ node scripts/verify-en-zh-groups.mjs
 
 原有事务回滚/重试和逐空反馈/例句验收同时通过。报告及手机截图位于 `reports/review-resume/`，其余回归报告位置见第 22、23 节。
 
+## 26. GitHub Pages 发布（2026-09-08）
+
+- 用户指定仓库：`https://github.com/php2026-cs/English-recite`，公开仓库。发布目标为 `https://php2026-cs.github.io/English-recite/`。
+- `.github/workflows/pages.yml` 在 `main` 更新后执行 `npm ci`、`npm test`、构建、上传 Pages artifact 和部署；可手动触发。构建仅有只读源码权限，部署任务单独获得 Pages 和 OIDC 权限。
+- Actions variables 提供 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_VAPID_PUBLIC_KEY`。只允许公开客户端配置，不上传 `.env.local`、管理凭据、本机缓存或测试报告。
+- Pages 构建设置 `VITE_BASE_PATH=/English-recite/`、`VITE_ROUTER_MODE=hash`，网址包含 `#/review/adaptive` 等路由，刷新无需服务器重写。PWA 启动范围、图标、Service Worker 注册与通知链接均适配仓库路径。
+- 本地开发和原有 Sites 仍默认根路径、BrowserRouter。现有 Sites 项目配置保留，GitHub 发布不更新该站点。Supabase 后端继续复用现有项目。
+- 本地验证：28 个测试文件、139 项测试和 Pages 生产构建通过；最终线上状态以 GitHub Actions 与 Pages 实际响应为准。
+
 ## 25. 例句目标词高亮与个人可接受答案（2026-09-08）
 
 - 用户确认：只突出当前正在背的单词。英文例句用浅黄色标出目标词及常见屈折变形（如 charge / charges / charged、run / ran / running）；不标出其他生词。按完整词匹配，保留原句的大小写、空格和标点。现有 80 个例句均已验证能匹配目标词。
