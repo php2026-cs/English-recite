@@ -1,3 +1,5 @@
+import { appUrl } from '../../lib/appUrl';
+
 export type PushCapability =
   | 'unsupported'
   | 'unconfigured'
@@ -150,7 +152,7 @@ export async function sendTestNotification(): Promise<PushStatus> {
   await registration.showNotification('该复习单词了', {
     body: '这是一条测试通知，表示复习提醒已就绪。',
     tag: 'lightwords-test',
-    data: { url: '/review/today' }
+    data: { url: appUrl() }
   });
   return { capability: 'subscribed', message: '测试通知已发送。' };
 }

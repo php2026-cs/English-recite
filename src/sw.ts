@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { clientsClaim } from 'workbox-core';
 import { precacheAndRoute } from 'workbox-precaching';
+import { appUrl } from './lib/appUrl';
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
@@ -12,7 +13,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url ?? '/review/today';
+  const targetUrl = appUrl(event.notification.data?.url);
 
   event.waitUntil(
     self.clients
@@ -33,7 +34,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body ?? '今天有释义等你复习。',
     tag: 'lightwords-review',
-    data: { url: data.url ?? '/review/today' }
+    data: { url: appUrl(data.url) }
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
