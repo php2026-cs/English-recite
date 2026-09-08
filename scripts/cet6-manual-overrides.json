@@ -1,0 +1,169 @@
+{
+  "charge": {
+    "word": "charge",
+    "phonetic": "/tʃɑːrdʒ/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "收费", "aliases": ["索价", "要价"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "指控", "aliases": ["控告"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "冲锋", "aliases": ["猛冲"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "费用", "aliases": ["收费", "价钱"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "指控", "aliases": ["控告"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "电荷" }
+    ]
+  },
+  "run": {
+    "word": "run",
+    "phonetic": "/rʌn/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "跑", "aliases": ["奔跑"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "经营", "aliases": ["管理"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "运转", "aliases": ["运行"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "流淌" },
+      { "partOfSpeech": "n.", "chineseMeaning": "跑步" },
+      { "partOfSpeech": "n.", "chineseMeaning": "连续", "aliases": ["一段时间"] }
+    ]
+  },
+  "set": {
+    "word": "set",
+    "phonetic": "/set/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "放置", "aliases": ["安放"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "设定", "aliases": ["设置"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "落下", "aliases": ["（太阳）落山"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "一套", "aliases": ["一组"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "集合" },
+      { "partOfSpeech": "n.", "chineseMeaning": "场景", "aliases": ["布景"] }
+    ]
+  },
+  "take": {
+    "word": "take",
+    "phonetic": "/teɪk/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "拿", "aliases": ["取"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "花费", "aliases": ["需要（时间）"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "乘坐" },
+      { "partOfSpeech": "v.", "chineseMeaning": "接受" },
+      { "partOfSpeech": "v.", "chineseMeaning": "拍摄", "aliases": ["记录"] }
+    ]
+  },
+  "issue": {
+    "word": "issue",
+    "phonetic": "/ˈɪʃuː/",
+    "senses": [
+      { "partOfSpeech": "n.", "chineseMeaning": "问题", "aliases": ["议题"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "期", "aliases": ["（报刊）期号"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "发布", "aliases": ["发行"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "发给", "aliases": ["分配"] }
+    ]
+  },
+  "hold": {
+    "word": "hold",
+    "phonetic": "/hoʊld/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "握住", "aliases": ["拿着"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "举行" },
+      { "partOfSpeech": "v.", "chineseMeaning": "容纳" },
+      { "partOfSpeech": "v.", "chineseMeaning": "保持", "aliases": ["持续"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "认为" },
+      { "partOfSpeech": "n.", "chineseMeaning": "抓", "aliases": ["握"] }
+    ]
+  },
+  "draw": {
+    "word": "draw",
+    "phonetic": "/drɔː/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "画", "aliases": ["绘画"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "拉", "aliases": ["拖"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "吸引" },
+      { "partOfSpeech": "v.", "chineseMeaning": "提取", "aliases": ["支取"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "打成平局" },
+      { "partOfSpeech": "n.", "chineseMeaning": "平局" }
+    ]
+  },
+  "mean": {
+    "word": "mean",
+    "phonetic": "/miːn/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "意思是", "aliases": ["意味着"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "打算" },
+      { "partOfSpeech": "adj.", "chineseMeaning": "刻薄的", "aliases": ["吝啬的"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "平均数", "aliases": ["中间"] }
+    ]
+  },
+  "address": {
+    "word": "address",
+    "phonetic": "/əˈdres/",
+    "senses": [
+      { "partOfSpeech": "n.", "chineseMeaning": "地址" },
+      { "partOfSpeech": "n.", "chineseMeaning": "演讲", "aliases": ["致辞"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "写地址" },
+      { "partOfSpeech": "v.", "chineseMeaning": "向……讲话" },
+      { "partOfSpeech": "v.", "chineseMeaning": "处理", "aliases": ["解决"] }
+    ]
+  },
+  "fine": {
+    "word": "fine",
+    "phonetic": "/faɪn/",
+    "senses": [
+      { "partOfSpeech": "adj.", "chineseMeaning": "好的", "aliases": ["健康的"] },
+      { "partOfSpeech": "adj.", "chineseMeaning": "细小的", "aliases": ["精细的"] },
+      { "partOfSpeech": "adj.", "chineseMeaning": "晴朗的" },
+      { "partOfSpeech": "n.", "chineseMeaning": "罚款" },
+      { "partOfSpeech": "v.", "chineseMeaning": "罚款" },
+      { "partOfSpeech": "adv.", "chineseMeaning": "很好" }
+    ]
+  },
+  "strike": {
+    "word": "strike",
+    "phonetic": "/straɪk/",
+    "senses": [
+      { "partOfSpeech": "v.", "chineseMeaning": "打", "aliases": ["击"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "罢工" },
+      { "partOfSpeech": "v.", "chineseMeaning": "突然想到" },
+      { "partOfSpeech": "v.", "chineseMeaning": "敲", "aliases": ["报时"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "罢工" },
+      { "partOfSpeech": "n.", "chineseMeaning": "打击" }
+    ]
+  },
+  "bear": {
+    "word": "bear",
+    "phonetic": "/beə(r)/",
+    "senses": [
+      { "partOfSpeech": "n.", "chineseMeaning": "熊" },
+      { "partOfSpeech": "v.", "chineseMeaning": "承受", "aliases": ["忍受"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "生育" },
+      { "partOfSpeech": "v.", "chineseMeaning": "携带" },
+      { "partOfSpeech": "v.", "chineseMeaning": "具有" }
+    ]
+  },
+  "spring": {
+    "word": "spring",
+    "phonetic": "/sprɪŋ/",
+    "senses": [
+      { "partOfSpeech": "n.", "chineseMeaning": "春天" },
+      { "partOfSpeech": "n.", "chineseMeaning": "弹簧" },
+      { "partOfSpeech": "n.", "chineseMeaning": "泉水" },
+      { "partOfSpeech": "v.", "chineseMeaning": "跳跃" },
+      { "partOfSpeech": "v.", "chineseMeaning": "突然出现" }
+    ]
+  },
+  "account": {
+    "word": "account",
+    "phonetic": "/əˈkaʊnt/",
+    "senses": [
+      { "partOfSpeech": "n.", "chineseMeaning": "账户" },
+      { "partOfSpeech": "n.", "chineseMeaning": "描述", "aliases": ["叙述"] },
+      { "partOfSpeech": "v.", "chineseMeaning": "解释", "aliases": ["说明"] }
+    ]
+  },
+  "subject": {
+    "word": "subject",
+    "phonetic": "/ˈsʌbdʒɪkt/",
+    "senses": [
+      { "partOfSpeech": "n.", "chineseMeaning": "主题", "aliases": ["科目"] },
+      { "partOfSpeech": "n.", "chineseMeaning": "主语" },
+      { "partOfSpeech": "adj.", "chineseMeaning": "受……支配的" },
+      { "partOfSpeech": "v.", "chineseMeaning": "使遭受" }
+    ]
+  }
+}
