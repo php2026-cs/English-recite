@@ -19,7 +19,7 @@ import {
   type CandidateMeaning
 } from '../services/dictionary/candidates';
 import { dictionaryService } from '../services/dictionary/dictionaryService';
-import { resolveCandidatesFromLocalFirst } from '../services/lexicon/localLexicon';
+import { resolveCandidatesFromLocalFirst } from '../services/lexicon/lookupCandidates';
 import type { Word } from '../types';
 
 export function WordNewPage() {

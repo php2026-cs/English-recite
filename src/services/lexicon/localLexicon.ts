@@ -5,21 +5,10 @@ import {
   type CandidateMeaning
 } from '../dictionary/candidates';
 import type { DictionaryLookupResponse } from '../dictionary/dictionaryServiceCore';
-import type { Meaning } from '../../types';
-import { normalizeChinese } from '../../lib/strings';
 
 const cet6Entries = cet6Data as LexiconData;
 
-export function getLexiconAliases(word: string, meanings: Meaning[]): Map<string, string[]> {
-  const entry = localLexicon.lookup(word);
-  return new Map(meanings.map((meaning) => [
-    meaning.id,
-    entry?.senses.filter((sense) =>
-      sense.partOfSpeech === meaning.partOfSpeech &&
-      normalizeChinese(sense.chineseMeaning) === normalizeChinese(meaning.chineseMeaning)
-    ).flatMap((sense) => sense.aliases ?? []) ?? []
-  ]));
-}
+export { getLexiconAliases } from './lexiconAliases';
 
 export function normalizeLexiconWord(word: string): string {
   return word.trim().toLowerCase();

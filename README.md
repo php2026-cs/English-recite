@@ -73,6 +73,8 @@ npm test
 
 ## 项目结构
 
+性能优化：完整 CET6 词典和词典页面按需加载，复习所需的别名使用独立小索引。首页主脚本约 654 KB（gzip 194 KB），此前约 5.36 MB（gzip 876 KB）。Service Worker 在后台保留完整词典离线缓存，因此这是首屏解析与关键资源的优化，并非删除离线词库。六级列表每次显示 80 个词，搜索仍覆盖全部 7,813 词。词典更新后通过 `npm run lexicon:build` 同时重建别名索引；单元测试检查索引与完整词典一致。
+
 网页发布使用 GitHub Pages，仓库为 `php2026-cs/English-recite`。推送 `main` 后，`.github/workflows/pages.yml` 自动测试、构建和发布；Supabase 继续提供登录和云同步。GitHub 仓库的 Actions variables 配置 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_VAPID_PUBLIC_KEY`，仅允许公开的客户端配置，禁止 service-role 密钥。
 
 Pages 构建使用 `/English-recite/` 资源路径和 hash 路由，复习地址形如 `/English-recite/#/review/adaptive`，刷新不会请求不存在的服务器路由。PWA 图标、启动路径、缓存和通知链接跟随部署路径。本地与已有 Sites 默认保持根路径和普通路由；`.openai/hosting.json` 保留已有 Sites 项目关联。环境文件不上传源码仓库，Vercel 配置仅作为历史文件保留。

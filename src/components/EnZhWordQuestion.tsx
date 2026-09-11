@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { ConfidencePicker } from './ConfidencePicker';
 import { evaluateEnZhSlots, groupMeaningsByPartOfSpeech, type EnZhSlotResult } from '../core/wordReview';
 import { createReviewTimer } from '../core/reviewTimer';
-import { getLexiconAliases } from '../services/lexicon/localLexicon';
+import { getLexiconAliases } from '../services/lexicon/lexiconAliases';
 import { findStudyExample, isFirstStudy } from '../services/lexicon/studyExamples';
 import { submitAdaptiveWordReview } from '../services/srs/srsReviewService';
 import type { ReviewRun } from '../core/reviewRun';

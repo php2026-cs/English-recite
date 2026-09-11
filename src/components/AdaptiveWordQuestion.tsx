@@ -6,7 +6,7 @@ import type { ReviewQuestion } from '../core/adaptiveReview';
 import { createReviewQuestion } from '../core/adaptiveReview';
 import { evaluateAdaptiveWordAnswers, type AdaptiveMeaningResult } from '../core/adaptiveWordReview';
 import { createReviewTimer } from '../core/reviewTimer';
-import { getLexiconAliases } from '../services/lexicon/localLexicon';
+import { getLexiconAliases } from '../services/lexicon/lexiconAliases';
 import { buildAdaptiveWordQuestion } from '../services/personalization/reviewController';
 import { submitAdaptiveWordReview } from '../services/srs/srsReviewService';
 import type { ReviewRating } from '../types';

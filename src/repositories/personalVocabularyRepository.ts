@@ -2,7 +2,7 @@ import { db } from '../db/db';
 import { normalizeChinese } from '../lib/strings';
 import type { Meaning } from '../types';
 import { getCurrentOwnerUserId } from '../services/ownership/ownership';
-import { getLexiconAliases } from '../services/lexicon/localLexicon';
+import { getLexiconAliases } from '../services/lexicon/lexiconAliases';
 import type { PersonalMeaningAlias } from '../core/personalVocabulary';
 
 export function mergePersonalAliases(word: string, meanings: Meaning[], personal: PersonalMeaningAlias[]): Map<string, string[]> {

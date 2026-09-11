@@ -3,11 +3,13 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../components/EmptyState';
 import { PageHeader } from '../components/PageHeader';
+import { Button } from '../components/Button';
 import { wordRepository } from '../repositories/wordRepository';
 import { localLexicon, normalizeLexiconWord } from '../services/lexicon/localLexicon';
 
 export function LexiconCET6Page() {
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(80);
   const entries = useMemo(() => localLexicon.list(), []);
   const words = useLiveQuery(() => wordRepository.list(), []);
   const joinedWords = useMemo(
@@ -41,7 +43,7 @@ export function LexiconCET6Page() {
 
       <input
         value={search}
-        onChange={(event) => setSearch(event.target.value)}
+        onChange={(event) => { setSearch(event.target.value); setVisibleCount(80); }}
         placeholder="搜索六级单词"
         className="mb-5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
       />
@@ -54,7 +56,7 @@ export function LexiconCET6Page() {
         />
       ) : (
         <div className="space-y-2">
-          {filteredEntries.map((entry) => {
+          {filteredEntries.slice(0, visibleCount).map((entry) => {
             const joined = joinedWords.has(normalizeLexiconWord(entry.word));
             return (
               <Link
@@ -82,6 +84,10 @@ export function LexiconCET6Page() {
               </Link>
             );
           })}
+          {visibleCount < filteredEntries.length && <div className="py-4 text-center">
+            <p className="mb-3 text-sm text-slate-500">已显示 {visibleCount} / {filteredEntries.length} 个单词</p>
+            <Button variant="secondary" onClick={() => setVisibleCount(count => count + 80)}>显示更多</Button>
+          </div>}
         </div>
       )}
     </>
