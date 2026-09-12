@@ -23,8 +23,8 @@ export function HomePage() {
   return (
     <>
       <PageHeader
-        title="今天背点什么？"
-        subtitle="轻量、本地优先，每个义项都单独记忆。"
+        title="让每个词，都记得更牢。"
+        subtitle="从辨认到回忆，开始今天的词汇练习。"
       />
 
       {!user ? (
@@ -39,26 +39,27 @@ export function HomePage() {
         </Link>
       ) : null}
 
-      <section className="rounded-3xl bg-brand-700 p-6 text-white shadow-soft">
-        <div className="text-sm text-brand-100">今日待复习</div>
-        <div className="mt-2 text-5xl font-semibold tracking-tight">
+      <section className="home-review-stage">
+        <div className="home-stage-label"><span>今日学习</span><span>DAILY REVIEW</span></div>
+        <div className="home-review-count">
           {queueCounts.total}
+          <span>个待学义项</span>
         </div>
-        <div className="mt-1 text-sm text-brand-100">
+        <div className="mt-4 text-sm text-slate-300">
           新义项 {queueCounts.new} · 复习 {queueCounts.due}
           {queueCounts.overdue > 0 ? ` · 逾期 ${queueCounts.overdue}` : ''}
         </div>
         <div className="mt-6">
           <Link
-            to="/review/today"
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-white px-5 text-base font-medium text-brand-700 shadow-sm transition hover:bg-brand-50 sm:w-auto"
+            to="/review"
+            className="home-start"
           >
-            开始背诵
+            开始背诵 <span aria-hidden="true">↗</span>
           </Link>
         </div>
       </section>
 
-      <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <section className="home-library-stats mt-5 grid grid-cols-2 gap-3 sm:gap-5">
         <Link
           to="/words"
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-200"

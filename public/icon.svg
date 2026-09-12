@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="轻词">
-  <rect width="512" height="512" rx="112" fill="#0f766e"/>
-  <path d="M150 130h212v72H150z" fill="#f8fafc"/>
-  <rect x="150" y="230" width="148" height="72" rx="12" fill="#5eead4"/>
-  <circle cx="150" cy="360" r="12" fill="#f8fafc"/>
-  <rect x="150" y="392" width="96" height="28" rx="14" fill="#f8fafc"/>
+  <rect width="512" height="512" fill="#191d18"/>
+  <path d="M80 80H432V356L356 432H80Z" fill="#ffed29"/>
+  <path d="M167 149H211L178 315H273L264 357H126Z M333 149H374L297 357H256Z" fill="#191d18"/>
 </svg>

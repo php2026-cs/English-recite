@@ -799,3 +799,12 @@ node scripts/verify-adaptive-review.mjs
 - 中文题干及输入揭晓的释义使用响应式大号粗体；切题使用 320ms 渐入位移动画，prefers-reduced-motion 时关闭。
 - 验证：30 个文件、145 项测试；Pages 生产构建通过。scripts/verify-two-rounds.mjs 验证三个模式的多选/单选、整批两轮、刷新恢复、选择不计分、重复提交幂等、输入评分、390px 无横向溢出和减少动态效果。报告及手机截图在 reports/two-rounds/。
 - 第 22～24 节的旧浏览器脚本针对单轮直接输入流程；新会话改为选择起步后，使用新脚本验证入口，旧单轮队列仍由已有核心测试覆盖。
+
+## 29. 终末地风格美化（2026-09-12）
+
+- 已安装 Brandon030722/ark-ui-skill 至本机 ~/.codex/skills/ark-ui。本项目采用 endfield + moderate：重构导航壳层、首页学习面板、共用按钮及标题，保留复习和数据库逻辑。
+- 参考 skill 的 design-language、recipes 中 Endfield 分支与 frontend-evidence。采用其总结的黑白黄、网格、小切角、导轨与方向动效规律；CSS、图标均由本项目重新实现，没有复制第三方组件或官方资产。
+- AppLayout 标记 data-ark-theme=endfield、data-ark-depth=moderate。桌面使用侧栏，手机改为安全区适配底栏；首页入口指向 /review，支持选择或继续两轮模式。
+- Tailwind 中性与强调色、圆角、阴影统一；保留正确/错误语义色。输入焦点、导航选中态与 reduced-motion 均有独立处理。PWA 图标及主题色同步更新。
+- ark-ui 静态审计无错误或警告；verify-endfield-design.mjs 检查 1440、390、320px 页面及键盘焦点，截图在 reports/endfield-design/。verify-two-rounds.mjs 三种复习模式均通过。
+- 此次没有引入新的运行依赖或远程字体，大词典仍独立加载。

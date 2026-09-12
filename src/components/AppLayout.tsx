@@ -17,33 +17,37 @@ const navItems: NavItem[] = [
 ];
 
 function navLinkClass({ isActive }: { isActive: boolean }): string {
-  return `flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-1.5 text-xs transition-colors sm:flex-row sm:gap-2 sm:px-3 sm:py-2 sm:text-sm ${
-    isActive ? 'text-brand-700' : 'text-slate-500 hover:text-slate-900'
+  return `ark-nav-link ${
+    isActive ? 'is-active' : ''
   }`;
 }
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 border-r border-slate-200 bg-white px-3 py-5 lg:block">
-        <div className="mb-8 px-3 text-lg font-semibold tracking-tight">轻词</div>
-        <nav className="space-y-1">
-          {navItems.map((item) => (
+    <div className="ark-shell min-h-screen text-slate-900" data-ark-theme="endfield" data-ark-depth="moderate">
+      <aside className="ark-sidebar">
+        <LinkBrand />
+        <p className="ark-rail-label">学习导航 / NAVIGATION</p>
+        <nav className="space-y-2" aria-label="主导航">
+          {navItems.map((item, index) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/'} className={navLinkClass}>
               <span aria-hidden="true" className="text-lg">
                 {item.icon}
               </span>
               <span>{item.label}</span>
+              <span className="nav-index" aria-hidden="true">0{index + 1}</span>
             </NavLink>
           ))}
         </nav>
+        <div className="ark-rail-footer"><span className="ark-signal" /> 六级词汇学习<br /><span className="mt-2 block text-xs tracking-widest">LIGHTWORDS / CET6</span></div>
       </aside>
 
-      <main className="mx-auto min-h-screen w-full max-w-3xl px-4 pb-24 pt-6 sm:px-6 lg:ml-56 lg:pb-12 lg:pt-10">
+      <div className="ark-topbar"><div className="lg:hidden"><LinkBrand /></div><span className="hidden text-xs tracking-widest lg:block">轻词 / VOCABULARY WORKSPACE</span><span className="ark-edition">CET6</span></div>
+      <main className="ark-main">
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav className="ark-mobile-nav" aria-label="手机导航">
         {navItems.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.to === '/'} className={navLinkClass}>
             <span aria-hidden="true" className="text-lg">
@@ -55,4 +59,8 @@ export function AppLayout() {
       </nav>
     </div>
   );
+}
+
+function LinkBrand() {
+  return <NavLink to="/" className="ark-brand" aria-label="轻词首页"><span className="ark-brand-symbol" aria-hidden="true">L<span>／</span></span><span>轻词<small>LIGHTWORDS</small></span></NavLink>;
 }

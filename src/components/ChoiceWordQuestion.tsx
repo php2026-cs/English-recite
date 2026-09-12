@@ -59,7 +59,7 @@ export function ChoiceWordQuestion({ run, onSaved }: { run: ReviewRun; onSaved: 
         aria-pressed={answers[option.id] === 'yes'} onClick={() => setAnswers(values => direction === 'zh-en'
           ? { __direction: direction, [option.id]: 'yes' }
           : { ...values, [option.id]: values[option.id] === 'yes' ? '' : 'yes' })}
-        className={`min-h-20 rounded-2xl border-2 p-4 text-left transition-colors ${revealed && option.meaningIds.length ? 'border-emerald-500 bg-emerald-50' : revealed && answers[option.id] === 'yes' ? 'border-red-400 bg-red-50' : answers[option.id] === 'yes' ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:border-brand-300'}`}>
+        className={`choice-option min-h-20 rounded-2xl border-2 p-4 text-left transition-colors ${revealed && option.meaningIds.length ? 'border-emerald-500 bg-emerald-50' : revealed && answers[option.id] === 'yes' ? 'border-red-400 bg-red-50' : answers[option.id] === 'yes' ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:border-brand-300'}`}>
         <span className="mr-3 text-sm font-bold text-brand-700">{String.fromCharCode(65 + index)}</span>
         <span className="break-words text-xl font-extrabold leading-snug text-slate-900 sm:text-2xl">{option.label}</span>
         {revealed && <span className="mt-2 block text-sm text-slate-600">{option.meaningIds.length ? '✓ 正确选项' : `干扰词：${option.sourceWord}`}</span>}
