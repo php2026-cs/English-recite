@@ -50,8 +50,8 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    const prepare = initial?.question ? Promise.resolve(initial.question) : run.mode === 'zh-en'
-      ? Promise.resolve(createReviewQuestion({ id: item.taskId, word: item.word, meaning: item.meanings[0], questionType: 'zh-to-en' }))
+    const prepare = initial?.question ? Promise.resolve(initial.question) : item.direction || run.mode === 'zh-en'
+      ? Promise.resolve(createReviewQuestion({ id: item.taskId, word: item.word, meaning: item.meanings[0], questionType: item.direction === 'en-zh' ? 'en-to-zh' : 'zh-to-en' }))
       : buildAdaptiveWordQuestion(item.word, item.meanings);
     void prepare.then((next) => {
       if (cancelled) return;
@@ -122,7 +122,7 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
     <p className="mb-4 text-sm font-medium text-brand-700">{question.questionType === 'spelling' ? '拼写' : '中译英'}</p>
     <form onSubmit={(event) => { event.preventDefault(); submit(); }}>
       <div className="space-y-3">
-        {item.meanings.map((meaning) => <p key={meaning.id} className="text-xl text-slate-900">
+        {item.meanings.map((meaning) => <p key={meaning.id} className="review-meaning">
           <span className="mr-3 text-sm font-semibold text-brand-700">{meaning.partOfSpeech}</span>{meaning.chineseMeaning}
         </p>)}
       </div>

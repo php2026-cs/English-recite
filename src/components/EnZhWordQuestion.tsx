@@ -192,7 +192,8 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
                 }`} />
               {result && <div id={`en-zh-feedback-${slot.id}`} className="mt-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-semibold text-slate-900">参考答案：{result.meaning.chineseMeaning}</p>
+                  <p className="mb-2 text-sm text-slate-500">参考答案</p>
+                  <p className="review-meaning">{result.meaning.chineseMeaning}</p>
                   <span className={`text-xs ${result.correct ? 'text-emerald-700' : 'text-amber-700'}`}>
                     {result.correct ? '✓ 已匹配' : '未匹配，可自行调整'}
                   </span>

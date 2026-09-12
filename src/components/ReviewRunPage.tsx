@@ -8,6 +8,7 @@ import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 import { EnZhWordQuestion } from './EnZhWordQuestion';
 import { AdaptiveWordQuestion } from './AdaptiveWordQuestion';
+import { ChoiceWordQuestion } from './ChoiceWordQuestion';
 
 export const REVIEW_TITLES = { 'en-zh': '英译中', 'zh-en': '中译英', adaptive: '智能复习' };
 const LINK_CLASS = 'inline-flex h-11 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-brand-700';
@@ -63,19 +64,22 @@ function OwnedRun({ mode }: { mode: ReviewRunMode }) {
   </>;
   const current = run.queue[run.index];
   return <>
-    <PageHeader title={title} subtitle={current.retry > 0
+    <PageHeader title={title} subtitle={current.phase === 'choice' ? `第一轮 · 选择辨认 · 第 ${run.index + 1} / ${run.initialWordCount} 个单词` : current.retry > 0
       ? `错义项再练 ${current.retry} / ${MAX_RETRIES} · 本题 ${current.meanings.length} 个义项`
-      : `第 ${run.completedWords + 1} / ${run.initialWordCount} 个单词 · 本题 ${current.meanings.length} 个义项`} />
+      : `${current.phase === 'input' ? '第二轮 · 输入回忆 · ' : ''}第 ${run.completedWords + 1} / ${run.initialWordCount} 个单词 · 本题 ${current.meanings.length} 个义项`} />
     <div className="mb-4 rounded-2xl border border-brand-100 bg-brand-50 p-3">
       <p className="text-sm font-medium text-brand-800">{resumed ? '已恢复上次进度' : '本轮进度自动保留'}</p>
-      <p className="mt-1 text-xs leading-5 text-brand-700">忘记的义项尽量隔 3 个单词再练，每个义项最多再练 2 次。{current.retry > 0 ? '本题只练尚未记住的义项。' : ''}</p>
+      <p className="mt-1 text-xs leading-5 text-brand-700">先完成全部选择题，再输入同一批单词的答案。输入轮评分后安排复习；忘记的义项最多再练 2 次。</p>
       <div className="mt-3 flex flex-wrap gap-3">
         <Link to="/review" className="inline-flex h-9 items-center rounded-lg border border-brand-200 bg-white px-3 text-sm text-brand-700">暂存退出</Link>
         <Button variant="ghost" size="sm" disabled={ending} onClick={() => void finish()}>{ending ? '结束中…' : '结束本轮'}</Button>
       </div>
       {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
-    {mode === 'en-zh' ? <EnZhWordQuestion key={current.taskId} run={run} onSaved={setRun} />
-      : <AdaptiveWordQuestion key={current.taskId} run={run} onSaved={setRun} />}
+    <div key={current.taskId} className="review-transition">
+      {current.phase === 'choice' ? <ChoiceWordQuestion run={run} onSaved={setRun} />
+        : mode === 'en-zh' ? <EnZhWordQuestion run={run} onSaved={setRun} />
+        : <AdaptiveWordQuestion run={run} onSaved={setRun} />}
+    </div>
   </>;
 }

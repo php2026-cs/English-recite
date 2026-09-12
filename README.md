@@ -73,6 +73,8 @@ npm test
 
 ## 项目结构
 
+新建的英译中、中译英和智能复习采用两轮：整批先选择辨认，再对同一批单词输入回忆。英译中显示选项总数和应选数量，用拼写接近的英语词对应释义作干扰；中译英为英文单选。选择轮只保留进度，第二轮输入后才按义项评分及安排 FSRS，再练仍使用输入题。旧的未完成会话保留原流程。题目释义使用响应式大号粗体，切题渐入，尊重系统减少动态效果设置。浏览器验证脚本为 `scripts/verify-two-rounds.mjs`。
+
 性能优化：完整 CET6 词典和词典页面按需加载，复习所需的别名使用独立小索引。首页主脚本约 654 KB（gzip 194 KB），此前约 5.36 MB（gzip 876 KB）。Service Worker 在后台保留完整词典离线缓存，因此这是首屏解析与关键资源的优化，并非删除离线词库。六级列表每次显示 80 个词，搜索仍覆盖全部 7,813 词。词典更新后通过 `npm run lexicon:build` 同时重建别名索引；单元测试检查索引与完整词典一致。
 
 网页发布使用 GitHub Pages，仓库为 `php2026-cs/English-recite`。推送 `main` 后，`.github/workflows/pages.yml` 自动测试、构建和发布；Supabase 继续提供登录和云同步。GitHub 仓库的 Actions variables 配置 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_VAPID_PUBLIC_KEY`，仅允许公开的客户端配置，禁止 service-role 密钥。

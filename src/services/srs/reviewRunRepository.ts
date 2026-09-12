@@ -1,6 +1,7 @@
 import { db } from '../../db/db';
 import { createId } from '../../lib/id';
 import type { ReviewRun, ReviewRunMode } from '../../core/reviewRun';
+import { advanceChoiceRun } from '../../core/reviewRun';
 import { getCurrentOwnerUserId } from '../ownership/ownership';
 import { settingsRepository } from '../../repositories/settingsRepository';
 import { buildReviewWordQueue } from './reviewQueue';
@@ -47,16 +48,33 @@ async function readOrCreateRun(mode: ReviewRunMode): Promise<{ run: ReviewRun; r
       await db.activeReviewRuns.put(run);
       return { run, resumed: true };
     }
-    const queue = buildReviewWordQueue(words, meanings, states, { dailyNewMeaningLimit: settings.dailyNewMeaningLimit })
+    const items = buildReviewWordQueue(words, meanings, states, { dailyNewMeaningLimit: settings.dailyNewMeaningLimit })
       .map((item) => ({ ...item, retry: 0, taskId: createId() }));
+    const queue = [
+      ...items.map(item => ({ ...item, phase: 'choice' as const })),
+      ...items.map(item => ({ ...item, phase: 'input' as const, taskId: createId() }))
+    ];
     const run: ReviewRun = {
       id: reviewRunKey(mode, owner), sessionId: createId(), localOwnerUserId: owner,
       mode, status: queue.length ? 'active' : 'finished', queue, index: 0,
-      initialWordCount: queue.length, completedWords: 0, completedMeanings: 0,
+      initialWordCount: items.length, completedWords: 0, completedMeanings: 0,
       completedRetries: 0, unresolvedMeaningIds: [], updatedAt: Date.now()
     };
     await db.activeReviewRuns.put(run);
     return { run, resumed: false };
+  });
+}
+
+export async function saveChoiceProgress(run: ReviewRun, direction: 'en-zh' | 'zh-en'): Promise<ReviewRun> {
+  return db.transaction('rw', db.activeReviewRuns, async () => {
+    const saved = await db.activeReviewRuns.get(run.id);
+    if (!saved || saved.sessionId !== run.sessionId || saved.localOwnerUserId !== getCurrentOwnerUserId()) throw new Error('复习会话已变化');
+    const taskId = run.queue[run.index].taskId;
+    if (saved.queue.slice(0, saved.index).some(task => task.taskId === taskId)) return saved;
+    if (saved.status !== 'active' || saved.queue[saved.index]?.taskId !== taskId) throw new Error('题目已变化');
+    const next = advanceChoiceRun(saved, direction);
+    await db.activeReviewRuns.put(next);
+    return next;
   });
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceReviewRun, type ReviewRun } from './reviewRun';
+import { advanceChoiceRun, advanceReviewRun, type ReviewRun } from './reviewRun';
 
 function createRun(count = 5): ReviewRun {
   return { id: 'run', sessionId: 'session', mode: 'en-zh', localOwnerUserId: null,
@@ -14,6 +14,19 @@ function createRun(count = 5): ReviewRun {
 }
 
 describe('本轮错义项再练', () => {
+  it('选择轮推进到整批输入轮，不计算掌握数，并保留相同题目方向', () => {
+    const run = createRun(2);
+    const inputs = run.queue.map(task => ({ ...task, phase: 'input' as const, taskId: task.taskId + '-input' }));
+    run.queue = [...run.queue.map(task => ({ ...task, phase: 'choice' as const })), ...inputs];
+    const first = advanceChoiceRun(run, 'zh-en');
+    expect(first.queue[first.index].phase).toBe('choice');
+    const second = advanceChoiceRun(first, 'en-zh');
+    expect(second.queue[second.index].phase).toBe('input');
+    expect(second.queue[second.index].direction).toBe('zh-en');
+    expect(second.completedWords).toBe(0);
+    expect(second.completedMeanings).toBe(0);
+    expect(second.completedRetries).toBe(0);
+  });
   it('隔三个其他题目插入，只收忘记义项，原队列不变', () => {
     const run = createRun();
     const next = advanceReviewRun(run, [

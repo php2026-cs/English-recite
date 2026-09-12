@@ -243,7 +243,7 @@ export async function submitAdaptiveWordReview(input: {
       // A second tab or a retried request may reference a question already committed.
       if (run.queue.slice(0, run.index).some((item) => item.taskId === input.reviewRun!.taskId)) return run;
       const task = run.queue[run.index];
-      if (run.status !== 'active' || task?.taskId !== input.reviewRun.taskId ||
+      if (run.status !== 'active' || task?.phase === 'choice' || task?.taskId !== input.reviewRun.taskId ||
         task.meanings.length !== input.results.length ||
         task.meanings.some((meaning) => !input.results.some((result) => result.meaning.id === meaning.id))) {
         throw new Error('当前题目已变化，请重新进入复习');

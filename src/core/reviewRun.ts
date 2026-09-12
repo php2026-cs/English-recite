@@ -5,6 +5,8 @@ export type ReviewRunMode = 'en-zh' | 'zh-en' | 'adaptive';
 export interface ReviewRunItem extends ReviewWordItem {
   taskId: string;
   retry: number;
+  phase?: 'choice' | 'input';
+  direction?: 'en-zh' | 'zh-en';
 }
 export interface ReviewRun {
   id: string;
@@ -23,6 +25,15 @@ export interface ReviewRun {
 }
 export const RETRY_GAP = 3;
 export const MAX_RETRIES = 2;
+
+export function advanceChoiceRun(run: ReviewRun, direction: 'en-zh' | 'zh-en'): ReviewRun {
+  const current = run.queue[run.index];
+  if (current.phase !== 'choice') throw new Error('当前不是选择轮');
+  const index = run.index + 1;
+  return { ...run, index, updatedAt: Date.now(),
+    queue: run.queue.map(task => task.word.id === current.word.id ? { ...task, direction } : task),
+    status: index < run.queue.length ? 'active' : 'finished' };
+}
 
 export function advanceReviewRun(run: ReviewRun,
   results: Array<{ meaning: Meaning; rating: ReviewRating }>, retryTaskId: string,

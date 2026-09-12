@@ -36,3 +36,21 @@ input[type='checkbox'] {
 * {
   box-sizing: border-box;
 }
+
+.review-meaning {
+  font-size: clamp(2rem, 7vw, 3.8rem);
+  font-weight: 900;
+  line-height: 1.22;
+  letter-spacing: -.035em;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+  text-shadow: 0 3px 0 #ccfbf1;
+}
+.review-transition { animation: review-arrive 320ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes review-arrive {
+  from { opacity: 0; transform: translateY(14px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .review-transition { animation: none; }
+}
