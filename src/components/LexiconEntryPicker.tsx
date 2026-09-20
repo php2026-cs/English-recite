@@ -57,7 +57,8 @@ export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntr
       </span>
       <span className="shrink-0 text-right text-xs"><span className={existingWord ? 'text-emerald-700' : 'text-slate-400'}>{existingWord ? '已加入' : '未加入'}</span><span className="mt-1 block text-slate-700">{open ? '收起释义 −' : '选择释义 ＋'}</span></span>
     </button>
-    <div id={panelId} hidden={!open} className="border-t border-slate-200 p-4">
+    <div id={panelId} aria-hidden={!open} ref={element => { if (element) element.inert = !open; }} className={`sense-disclosure ${open ? 'is-open' : ''}`}>
+      <div className="sense-disclosure-clip"><div className="border-t border-slate-200 p-4">
       {groupCandidatesByPartOfSpeech(candidates).map(group => <fieldset key={group.partOfSpeech} className="mb-4">
         <legend className="mb-2 text-xs font-bold text-slate-600">{group.partOfSpeech}</legend>
         <div className="space-y-2">{group.candidates.map(candidate => {
@@ -74,6 +75,7 @@ export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntr
       <Button className="w-full" disabled={saving || selectedCandidates.length === 0} onClick={() => void save()}>{saving ? '加入中…' : available.length === 0 ? '全部释义已加入' : `加入我的词库 · ${selectedCandidates.length} 个释义`}</Button>
       {notice && <p role="status" className="mt-3 text-sm text-emerald-700">{notice}</p>}
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+      </div></div>
     </div>
   </article>;
 }

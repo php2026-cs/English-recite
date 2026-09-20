@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { MotionSurface, animateControl } from './MotionSurface';
 
 interface NavItem {
   to: string;
@@ -24,7 +25,7 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 
 export function AppLayout() {
   return (
-    <div className="ark-shell min-h-screen text-slate-900" data-ark-theme="endfield" data-ark-depth="moderate">
+    <div className="ark-shell min-h-screen text-slate-900" data-ark-theme="endfield" data-ark-depth="moderate" onClickCapture={animateControl}>
       <aside className="ark-sidebar">
         <LinkBrand />
         <p className="ark-rail-label">学习导航 / NAVIGATION</p>
@@ -44,7 +45,7 @@ export function AppLayout() {
 
       <div className="ark-topbar"><div className="lg:hidden"><LinkBrand /></div><span className="hidden text-xs tracking-widest lg:block">轻词 / VOCABULARY WORKSPACE</span><span className="ark-edition">CET6</span></div>
       <main className="ark-main">
-        <Outlet />
+        <MotionSurface><Outlet /></MotionSurface>
       </main>
 
       <nav className="ark-mobile-nav" aria-label="手机导航">
