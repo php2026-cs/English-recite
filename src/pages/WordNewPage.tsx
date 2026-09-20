@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { CandidateMeaningCard } from '../components/CandidateMeaningCard';
@@ -22,9 +22,13 @@ import { dictionaryService } from '../services/dictionary/dictionaryService';
 import { resolveCandidatesFromLocalFirst } from '../services/lexicon/lookupCandidates';
 import type { Word } from '../types';
 
+const LexiconWordSuggestions = lazy(() => import('../components/LexiconWordSuggestions'));
+
 export function WordNewPage() {
   const navigate = useNavigate();
   const [word, setWord] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const lookupVersion = useRef(0);
   const [phonetic, setPhonetic] = useState('');
   const [candidates, setCandidates] = useState<CandidateMeaning[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,25 +41,29 @@ export function WordNewPage() {
 
   const canLookup = word.trim().length > 0 && !loading;
 
-  async function handleLookup(forceRefresh = false) {
-    if (!canLookup) return;
+  async function handleLookup(forceRefresh = false, lookupWord = word) {
+    if (!lookupWord.trim()) return;
+    const version = ++lookupVersion.current;
+    setShowSuggestions(false);
     setLoading(true);
     setError(null);
     setExistingWord(null);
     setCacheNotice(null);
 
     try {
-      const existing = await wordRepository.findByNormalizedWord(word);
+      const existing = await wordRepository.findByNormalizedWord(lookupWord);
+      if (version !== lookupVersion.current) return;
       if (existing) {
         setExistingWord(existing);
         return;
       }
 
-      const resolved = await resolveCandidatesFromLocalFirst(word, (lookupWord) =>
+      const resolved = await resolveCandidatesFromLocalFirst(lookupWord, (lookupWord) =>
         dictionaryService.lookup(lookupWord, { forceRefresh })
       );
 
-      if (resolved.phonetic && !phonetic.trim()) {
+      if (version !== lookupVersion.current) return;
+      if (resolved.phonetic && (lookupWord !== word || !phonetic.trim())) {
         setPhonetic(resolved.phonetic);
       }
       if (resolved.source === 'lexicon') {
@@ -74,14 +82,32 @@ export function WordNewPage() {
         ])
       );
     } catch (lookupError) {
+      if (version !== lookupVersion.current) return;
       setError(
         lookupError instanceof Error
           ? lookupError.message
           : '暂时无法获取释义，你仍然可以手动添加。'
       );
     } finally {
-      setLoading(false);
+      if (version === lookupVersion.current) setLoading(false);
     }
+  }
+
+  function changeWord(value: string) {
+    lookupVersion.current += 1;
+    setWord(value);
+    setCandidates([]);
+    setPhonetic('');
+    setExistingWord(null);
+    setError(null);
+    setCacheNotice(null);
+    setLoading(false);
+    setShowSuggestions(Boolean(value.trim()));
+  }
+
+  function selectWord(value: string) {
+    changeWord(value);
+    void handleLookup(false, value);
   }
 
   function handleWordKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -158,7 +184,7 @@ export function WordNewPage() {
                 id="new-word"
                 autoFocus
                 value={word}
-                onChange={(event) => setWord(event.target.value)}
+                onChange={(event) => changeWord(event.target.value)}
                 onKeyDown={handleWordKeyDown}
                 placeholder="例如：charge"
                 autoCapitalize="none"
@@ -174,8 +200,12 @@ export function WordNewPage() {
                 {loading ? '正在获取释义…' : '获取释义'}
               </Button>
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">按 Enter 也可以直接获取释义。</p>
+            <p className="mt-1.5 text-xs text-slate-400">输入部分拼写可选择匹配单词；按 Enter 查询完整单词。</p>
           </div>
+
+          {showSuggestions && word.trim() && <Suspense fallback={<p className="mt-3 text-sm text-slate-500">正在加载匹配单词…</p>}>
+            <LexiconWordSuggestions key={word.trim().toLowerCase()} query={word} onSelect={selectWord} />
+          </Suspense>}
 
           <div className="mt-4">
             <label htmlFor="new-phonetic" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -321,7 +351,7 @@ export function WordNewPage() {
 
           <Button
             type="submit"
-            disabled={!word.trim() || saving || existingWord !== null}
+            disabled={!word.trim() || loading || saving || existingWord !== null}
             className="mt-4 w-full"
           >
             {saving
