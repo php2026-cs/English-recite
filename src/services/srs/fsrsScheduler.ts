@@ -105,6 +105,7 @@ export function reviewMeaningWithFsrs(
     elapsedDays: record.log.elapsed_days,
     scheduledDays: record.log.scheduled_days,
     fsrsData: {
+      ...existingState?.fsrsData,
       rating,
       fsrsState: State[nextCard.state],
       logState: State[record.log.state]

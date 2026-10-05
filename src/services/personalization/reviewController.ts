@@ -8,6 +8,7 @@ import { createId } from '../../lib/id';
 import { performanceRepository } from '../../repositories/performanceRepository';
 import { reviewStateRepository } from '../srs/reviewState';
 import { selectQuestionType } from './personalizationEngine';
+import { readWeaknesses, preferredWeaknessDirection } from '../../core/studySupport';
 import type { Meaning, Word } from '../../types';
 
 export async function buildAdaptiveReviewQuestion(input: {
@@ -40,7 +41,9 @@ export async function buildAdaptiveWordQuestion(word: Word, meanings: Meaning[])
   const plans = await Promise.all(meanings.map(async (meaning) => {
     const profile = await performanceRepository.getProfile(meaning.id);
     const state = await reviewStateRepository.get(meaning.id);
-    return { meaning, plan: selectQuestionType(profile, state) };
+    const plan = selectQuestionType(profile, state);
+    const preferred = preferredWeaknessDirection(readWeaknesses(state));
+    return { meaning, plan: preferred ? { ...plan, questionType: preferred } : plan };
   }));
   plans.sort((a, b) => b.plan.priority - a.plan.priority);
   const selected = plans[0];

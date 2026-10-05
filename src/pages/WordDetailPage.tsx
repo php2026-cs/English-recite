@@ -23,6 +23,8 @@ import {
 } from '../services/dictionary/candidates';
 import { dictionaryService } from '../services/dictionary/dictionaryService';
 import { resolveCandidatesFromLocalFirst } from '../services/lexicon/lookupCandidates';
+import { readWeaknesses } from '../core/studySupport';
+import { reviewStateRepository } from '../services/srs/reviewState';
 import type { Meaning } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
@@ -39,6 +41,7 @@ export function WordDetailPage() {
     () => wordRepository.getWithMeanings(id),
     [id, user?.id ?? null]
   );
+  const states = useLiveQuery(() => reviewStateRepository.list(), [id, user?.id ?? null]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [pendingDelete, setPendingDelete] = useState<Meaning | null>(null);
   const [confirmingWordDelete, setConfirmingWordDelete] = useState(false);
@@ -361,6 +364,7 @@ export function WordDetailPage() {
               <MeaningCard
                 key={meaning.id}
                 meaning={meaning}
+                weaknesses={readWeaknesses(states?.find(state => state.meaningId === meaning.id))}
                 onToggleSelected={toggleSelected}
                 onEdit={(selected) => setEditor({ type: 'edit', meaning: selected })}
                 onDelete={setPendingDelete}
@@ -381,7 +385,8 @@ export function WordDetailPage() {
               ? {
                   partOfSpeech: editor.meaning.partOfSpeech,
                   chineseMeaning: editor.meaning.chineseMeaning,
-                  selectedForStudy: editor.meaning.selectedForStudy
+                  selectedForStudy: editor.meaning.selectedForStudy,
+                  studyWeaknesses: readWeaknesses(states?.find(state => state.meaningId === editor.meaning.id))
                 }
               : undefined
           }
@@ -405,7 +410,8 @@ export function WordDetailPage() {
               ? {
                   partOfSpeech: editingMoreCandidate.partOfSpeech,
                   chineseMeaning: editingMoreCandidate.chineseMeaning,
-                  selectedForStudy: editingMoreCandidate.selectedForStudy
+                  selectedForStudy: editingMoreCandidate.selectedForStudy,
+                  studyWeaknesses: editingMoreCandidate.studyWeaknesses
                 }
               : undefined
           }

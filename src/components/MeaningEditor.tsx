@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import type { MeaningInput } from '../repositories/meaningRepository';
 import { Button } from './Button';
 import { PosInput } from './PosInput';
+import { WeaknessPicker } from './WeaknessPicker';
+import type { StudyWeakness } from '../core/studySupport';
 
 interface MeaningEditorProps {
   initialValue?: MeaningInput;
@@ -18,6 +20,7 @@ export function MeaningEditor({
 }: MeaningEditorProps) {
   const [partOfSpeech, setPartOfSpeech] = useState(initialValue?.partOfSpeech ?? 'v.');
   const [chineseMeaning, setChineseMeaning] = useState(initialValue?.chineseMeaning ?? '');
+  const [studyWeaknesses, setStudyWeaknesses] = useState<StudyWeakness[]>(initialValue?.studyWeaknesses ?? []);
   const [selectedForStudy, setSelectedForStudy] = useState(
     initialValue?.selectedForStudy ?? true
   );
@@ -31,6 +34,7 @@ export function MeaningEditor({
       partOfSpeech: partOfSpeech.trim(),
       chineseMeaning: chineseMeaning.trim(),
       selectedForStudy
+      , studyWeaknesses
     });
   }
 
@@ -59,6 +63,7 @@ export function MeaningEditor({
         />
         <span className="text-sm text-slate-700">加入背诵范围</span>
       </label>
+      <WeaknessPicker value={studyWeaknesses} onChange={setStudyWeaknesses} />
       <div className="flex justify-end gap-3 pt-1">
         {onCancel ? (
           <Button type="button" variant="secondary" onClick={onCancel}>

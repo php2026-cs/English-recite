@@ -1,7 +1,9 @@
+import { WEAKNESS_LABELS, type StudyWeakness } from '../core/studySupport';
 import type { Meaning } from '../types';
 
 interface MeaningCardProps {
   meaning: Meaning;
+  weaknesses?: StudyWeakness[];
   onToggleSelected: (meaning: Meaning) => void;
   onEdit: (meaning: Meaning) => void;
   onDelete: (meaning: Meaning) => void;
@@ -9,6 +11,7 @@ interface MeaningCardProps {
 
 export function MeaningCard({
   meaning,
+  weaknesses = [],
   onToggleSelected,
   onEdit,
   onDelete
@@ -29,6 +32,7 @@ export function MeaningCard({
         <p className="mt-1 break-words text-base leading-6 text-slate-900">
           {meaning.chineseMeaning}
         </p>
+        {weaknesses.length > 0 && <p className="mt-2 text-xs text-slate-500">薄弱点：{weaknesses.map(key => WEAKNESS_LABELS[key]).join("、")}</p>}
       </div>
       <div className="flex shrink-0 gap-1">
         <button

@@ -3,8 +3,11 @@ import { createId, now } from '../lib/id';
 import type { Meaning } from '../types';
 import { syncMetaRepository } from '../services/sync/syncMetaRepository';
 import { getCurrentOwnerUserId } from '../services/ownership/ownership';
+import type { StudyWeakness } from '../core/studySupport';
+import { saveStudyWeaknesses } from '../services/srs/studySupportRepository';
 
 export interface MeaningInput {
+  studyWeaknesses?: StudyWeakness[];
   partOfSpeech: string;
   chineseMeaning: string;
   selectedForStudy: boolean;
@@ -46,6 +49,7 @@ export const meaningRepository = {
     await db.meanings.add(meaning);
     await db.words.update(wordId, { updatedAt: timestamp });
     await syncMetaRepository.markDirty(`meaning:${meaning.id}`, timestamp);
+    if (input.studyWeaknesses?.length) await saveStudyWeaknesses(meaning.id, input.studyWeaknesses);
     return meaning;
   },
 
@@ -59,6 +63,7 @@ export const meaningRepository = {
       updatedAt: now()
     });
     await syncMetaRepository.markDirty(`meaning:${meaningId}`);
+    if (input.studyWeaknesses !== undefined) await saveStudyWeaknesses(meaningId, input.studyWeaknesses);
     return db.meanings.get(meaningId);
   },
 

@@ -20,12 +20,15 @@ import {
 } from '../services/dictionary/candidates';
 import { dictionaryService } from '../services/dictionary/dictionaryService';
 import { resolveCandidatesFromLocalFirst } from '../services/lexicon/lookupCandidates';
+import { WeaknessPicker } from '../components/WeaknessPicker';
+import type { StudyWeakness } from '../core/studySupport';
 import type { Word } from '../types';
 
 const LexiconWordSuggestions = lazy(() => import('../components/LexiconWordSuggestions'));
 
 export function WordNewPage() {
   const navigate = useNavigate();
+  const [studyWeaknesses, setStudyWeaknesses] = useState<StudyWeakness[]>([]);
   const [word, setWord] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const lookupVersion = useRef(0);
@@ -96,6 +99,7 @@ export function WordNewPage() {
   function changeWord(value: string) {
     lookupVersion.current += 1;
     setWord(value);
+    setStudyWeaknesses([]);
     setCandidates([]);
     setPhonetic('');
     setExistingWord(null);
@@ -153,7 +157,7 @@ export function WordNewPage() {
       });
 
       for (const candidate of candidates) {
-        await meaningRepository.create(created.id, toMeaningInput(candidate));
+        await meaningRepository.create(created.id, { ...toMeaningInput(candidate), studyWeaknesses: candidate.studyWeaknesses ?? (candidate.selectedForStudy ? studyWeaknesses : []) });
       }
 
       navigate(`/words/${created.id}`, { replace: true });
@@ -349,6 +353,7 @@ export function WordNewPage() {
             ＋ 添加自定义释义
           </Button>
 
+          <WeaknessPicker value={studyWeaknesses} onChange={setStudyWeaknesses} />
           <Button
             type="submit"
             disabled={!word.trim() || loading || saving || existingWord !== null}
@@ -375,7 +380,8 @@ export function WordNewPage() {
               ? {
                   partOfSpeech: editingCandidate.partOfSpeech,
                   chineseMeaning: editingCandidate.chineseMeaning,
-                  selectedForStudy: editingCandidate.selectedForStudy
+                  selectedForStudy: editingCandidate.selectedForStudy,
+                  studyWeaknesses: editingCandidate.studyWeaknesses
                 }
               : undefined
           }

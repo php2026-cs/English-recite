@@ -6,10 +6,13 @@ import { wordRepository } from '../repositories/wordRepository';
 import { meaningRepository } from '../repositories/meaningRepository';
 import { candidateKey, filterMissingCandidates, groupCandidatesByPartOfSpeech } from '../services/dictionary/candidates';
 import { lexiconEntryToCandidates } from '../services/lexicon/localLexicon';
+import { WeaknessPicker } from './WeaknessPicker';
+import type { StudyWeakness } from '../core/studySupport';
 import { Button } from './Button';
 
 export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntry; existingWord?: WordWithMeanings }) {
   const panelId = useId();
+  const [studyWeaknesses, setStudyWeaknesses] = useState<StudyWeakness[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -27,13 +30,13 @@ export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntr
     setSaving(true);
     setError('');
     try {
-      const count = await db.transaction('rw', db.words, db.meanings, db.syncMeta, async () => {
+      const count = await db.transaction('rw', db.words, db.meanings, db.syncMeta, db.meaningReviewStates, async () => {
         const found = await wordRepository.findByNormalizedWord(entry.word);
         const target = found ?? await wordRepository.create({ word: entry.word, phonetic: entry.phonetic });
         const meanings = await meaningRepository.listByWord(target.id);
         const missing = filterMissingCandidates(meanings, selectedCandidates);
         for (const candidate of missing) {
-          await meaningRepository.create(target.id, { ...candidate, selectedForStudy: true });
+          await meaningRepository.create(target.id, { ...candidate, selectedForStudy: true, studyWeaknesses });
         }
         return missing.length;
       });
@@ -72,6 +75,7 @@ export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntr
           </label>;
         })}</div>
       </fieldset>)}
+      <WeaknessPicker value={studyWeaknesses} onChange={setStudyWeaknesses} />
       <Button className="w-full" disabled={saving || selectedCandidates.length === 0} onClick={() => void save()}>{saving ? '加入中…' : available.length === 0 ? '全部释义已加入' : `加入我的词库 · ${selectedCandidates.length} 个释义`}</Button>
       {notice && <p role="status" className="mt-3 text-sm text-emerald-700">{notice}</p>}
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}

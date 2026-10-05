@@ -1,8 +1,10 @@
 import { createId } from '../../lib/id';
 import { normalizeChinese } from '../../lib/strings';
 import { normalizePartOfSpeech } from './dictionaryProvider';
+import type { StudyWeakness } from '../../core/studySupport';
 
 export interface CandidateMeaning {
+  studyWeaknesses?: StudyWeakness[];
   id: string;
   partOfSpeech: string;
   chineseMeaning: string;
@@ -14,6 +16,7 @@ export interface CandidateMeaning {
 }
 
 export interface CandidateMeaningInput {
+  studyWeaknesses?: StudyWeakness[];
   partOfSpeech: string;
   chineseMeaning: string;
   selectedForStudy: boolean;
@@ -32,6 +35,7 @@ export function createCandidateMeaning(
     partOfSpeech: input.partOfSpeech.trim(),
     chineseMeaning: input.chineseMeaning.trim(),
     selectedForStudy: input.selectedForStudy,
+    studyWeaknesses: input.studyWeaknesses,
     source,
     sourceDefinition: metadata?.sourceDefinition,
     translatedDefinition: metadata?.translatedDefinition,
@@ -51,6 +55,7 @@ export function updateCandidateMeaning(
           partOfSpeech: input.partOfSpeech.trim(),
           chineseMeaning: input.chineseMeaning.trim(),
           selectedForStudy: input.selectedForStudy,
+          studyWeaknesses: input.studyWeaknesses,
           source: candidate.source === 'dictionary' ? 'edited' : candidate.source
         }
       : candidate
@@ -153,5 +158,6 @@ export function toMeaningInput(candidate: CandidateMeaning): CandidateMeaningInp
     partOfSpeech: candidate.partOfSpeech,
     chineseMeaning: candidate.chineseMeaning,
     selectedForStudy: candidate.selectedForStudy
+    , studyWeaknesses: candidate.studyWeaknesses
   };
 }
