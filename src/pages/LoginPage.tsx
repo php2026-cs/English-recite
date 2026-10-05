@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
+import { toFriendlyAuthError } from '../auth/authErrors';
 
 export function LoginPage() {
   const { configured, signIn, signUp, user } = useAuth();
@@ -19,6 +20,7 @@ export function LoginPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     if (!configured) {
       setMessage('云同步未配置，本地功能仍可正常使用。');
       return;
@@ -26,12 +28,16 @@ export function LoginPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const result = mode === 'login' ? await signIn(email, password) : await signUp(email, password);
+      const result = mode === 'login' ? await signIn(email.trim(), password) : await signUp(email.trim(), password);
       if (result.error) {
         setMessage(toFriendlyAuthError(result.error));
+      } else if ('confirmationRequired' in result && result.confirmationRequired) {
+        setMessage('注册申请已提交，请查看邮箱中的验证邮件，完成验证后再登录。');
       } else {
         navigate('/settings/account');
       }
+    } catch (error) {
+      setMessage(toFriendlyAuthError(error));
     } finally {
       setSaving(false);
     }
@@ -53,6 +59,7 @@ export function LoginPage() {
           <input
             id="email"
             type="email"
+            required
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -66,7 +73,9 @@ export function LoginPage() {
           <input
             id="password"
             type="password"
-            autoComplete="current-password"
+            required
+            minLength={mode === 'signup' ? 6 : undefined}
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
@@ -74,27 +83,20 @@ export function LoginPage() {
         </div>
         <div className="flex gap-3">
           <Button type="submit" disabled={saving || !configured} className="flex-1">
-            {mode === 'login' ? '登录' : '注册'}
+            {saving ? '正在连接…' : mode === 'login' ? '登录' : '注册'}
           </Button>
           <Button
             type="button"
             variant="secondary"
             disabled={saving || !configured}
-            onClick={() => setMode((current) => (current === 'login' ? 'signup' : 'login'))}
+            onClick={() => { setMessage(null); setMode((current) => (current === 'login' ? 'signup' : 'login')); }}
             className="flex-1"
           >
             {mode === 'login' ? '去注册' : '去登录'}
           </Button>
         </div>
-        {message ? <p className="text-sm text-slate-500">{message}</p> : null}
+        {message ? <p role="status" className="text-sm leading-6 text-slate-700">{message}</p> : null}
       </form>
     </>
   );
-}
-
-function toFriendlyAuthError(error: string): string {
-  if (/invalid login credentials/i.test(error)) return '邮箱或密码错误';
-  if (/rate limit|too many/i.test(error)) return '发送请求过于频繁，请稍后再试';
-  if (/email provider disabled/i.test(error)) return '当前未启用邮箱登录';
-  return '登录或注册失败，请稍后再试';
 }

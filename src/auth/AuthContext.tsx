@@ -17,7 +17,7 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ error?: string; confirmationRequired?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -80,10 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signUp(email, password) {
         if (!supabase) return { error: '云同步未配置' };
         const { data, error } = await supabase.auth.signUp({ email, password });
-        if (!error && data.user) {
+        if (!error && data.user && data.session) {
           await ensureProfile(data.user.id);
         }
-        return { error: error?.message };
+        return { error: error?.message, confirmationRequired: !error && !data.session };
       },
       async signOut() {
         if (supabase) await supabase.auth.signOut();
