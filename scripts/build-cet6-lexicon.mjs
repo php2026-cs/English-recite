@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyLexiconHygiene, normalizePartOfSpeech } from './lexicon-rules.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
@@ -19,23 +20,6 @@ function parseArgs() {
 
 function normalizeWord(word) {
   return word.trim().toLowerCase();
-}
-
-function normalizePartOfSpeech(value) {
-  const normalized = value.trim().toLowerCase();
-  if (['n.', 'noun'].includes(normalized)) return 'n.';
-  if (['v.', 'vt.', 'vi.', 'verb', 'transitive verb', 'intransitive verb'].includes(normalized)) {
-    return 'v.';
-  }
-  if (['adj.', 'adjective'].includes(normalized)) return 'adj.';
-  if (['adv.', 'adverb'].includes(normalized)) return 'adv.';
-  if (['prep.', 'preposition'].includes(normalized)) return 'prep.';
-  if (['conj.', 'conjunction'].includes(normalized)) return 'conj.';
-  if (['pron.', 'pronoun'].includes(normalized)) return 'pron.';
-  if (['num.', 'numeral'].includes(normalized)) return 'num.';
-  if (['interj.', 'interjection'].includes(normalized)) return 'interj.';
-  if (normalized === 'phrase' || normalized === 'phrasal verb') return 'phrase';
-  return 'other';
 }
 
 function parseTranslationEntry(rawTranslation) {
@@ -181,6 +165,12 @@ function main() {
     applyManualOverrides(entries, loadJsonFile(overridePath));
   }
 
+  const hygiene = applyLexiconHygiene(entries);
+  if (hygiene.emptiedEntries.length > 0) {
+    console.error(`清洗后出现无释义词条：${JSON.stringify(hygiene.emptiedEntries)}`);
+    process.exit(1);
+  }
+
   const lexiconDir = join(projectRoot, 'src', 'data', 'lexicon');
   const reportsDir = join(projectRoot, 'reports');
   mkdirSync(lexiconDir, { recursive: true });
@@ -192,7 +182,7 @@ function main() {
     'utf8'
   );
 
-  const report = createReport(targetWords, matched, entries, unmatched);
+  const report = { ...createReport(targetWords, matched, entries, unmatched), hygiene };
   writeFileSync(
     join(reportsDir, 'cet6-lexicon-report.json'),
     `${JSON.stringify(report, null, 2)}\n`,
@@ -200,6 +190,12 @@ function main() {
   );
   writeFileSync(
     join(reportsDir, 'cet6-unmatched.json'),
+    `${JSON.stringify(unmatched, null, 2)}\n`,
+    'utf8'
+  );
+  // 未匹配词表是 validate 的输入，必须随源码入库，否则全新克隆无法校验。
+  writeFileSync(
+    join(__dirname, 'cet6-unmatched.json'),
     `${JSON.stringify(unmatched, null, 2)}\n`,
     'utf8'
   );

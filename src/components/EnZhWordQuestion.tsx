@@ -17,12 +17,8 @@ import type { Meaning, ReviewRating } from '../types';
 import { mergePersonalAliases, personalVocabularyRepository } from '../repositories/personalVocabularyRepository';
 import { normalizeChinese } from '../lib/strings';
 import { splitHighlightedExample } from '../core/exampleHighlight';
+import { PART_OF_SPEECH_LABELS as POS_NAMES } from '../lib/partOfSpeech';
 
-const POS_NAMES: Record<string, string> = {
-  'n.': '名词', 'v.': '动词', 'adj.': '形容词', 'adv.': '副词',
-  'prep.': '介词', 'conj.': '连词', 'pron.': '代词', 'num.': '数词',
-  'interj.': '感叹词', phrase: '短语', other: '其他词性'
-};
 const RATINGS: Array<{ value: ReviewRating; label: string }> = [
   { value: 'again', label: '忘记' }, { value: 'hard', label: '困难' },
   { value: 'good', label: '记得' }, { value: 'easy', label: '熟练' }

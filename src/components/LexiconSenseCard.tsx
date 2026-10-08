@@ -1,4 +1,5 @@
 import type { LexiconSense } from '../data/lexicon/types';
+import { partOfSpeechLabel } from '../lib/partOfSpeech';
 
 interface LexiconSenseCardProps {
   sense: LexiconSense;
@@ -29,12 +30,12 @@ export function LexiconSenseCard({
         checked={selected}
         onChange={() => onToggle(sense)}
         onClick={(event) => event.stopPropagation()}
-        aria-label={`${sense.partOfSpeech} ${sense.chineseMeaning}`}
+        aria-label={`${partOfSpeechLabel(sense.partOfSpeech)} ${sense.chineseMeaning}`}
         className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
       />
       <div className="min-w-0 flex-1">
         <div className="text-xs font-semibold uppercase tracking-wide text-brand-700">
-          {sense.partOfSpeech}
+          {partOfSpeechLabel(sense.partOfSpeech)}
         </div>
         <p className="mt-1 break-words text-base leading-6 text-slate-900">
           {sense.chineseMeaning}

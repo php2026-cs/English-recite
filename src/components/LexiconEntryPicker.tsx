@@ -9,6 +9,7 @@ import { lexiconEntryToCandidates } from '../services/lexicon/localLexicon';
 import { WeaknessPicker } from './WeaknessPicker';
 import type { StudyWeakness } from '../core/studySupport';
 import { Button } from './Button';
+import { partOfSpeechLabel } from '../lib/partOfSpeech';
 
 export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntry; existingWord?: WordWithMeanings }) {
   const panelId = useId();
@@ -63,7 +64,7 @@ export function LexiconEntryPicker({ entry, existingWord }: { entry: LexiconEntr
     <div id={panelId} aria-hidden={!open} ref={element => { if (element) element.inert = !open; }} className={`sense-disclosure ${open ? 'is-open' : ''}`}>
       <div className="sense-disclosure-clip"><div className="border-t border-slate-200 p-4">
       {groupCandidatesByPartOfSpeech(candidates).map(group => <fieldset key={group.partOfSpeech} className="mb-4">
-        <legend className="mb-2 text-xs font-bold text-slate-600">{group.partOfSpeech}</legend>
+        <legend className="mb-2 text-xs font-bold text-slate-600">{partOfSpeechLabel(group.partOfSpeech)}</legend>
         <div className="space-y-2">{group.candidates.map(candidate => {
           const added = existingKeys.has(candidateKey(candidate.partOfSpeech, candidate.chineseMeaning));
           const checked = added || selected.includes(candidate.id);

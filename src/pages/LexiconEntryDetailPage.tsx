@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { LexiconSenseCard } from '../components/LexiconSenseCard';
 import { PageHeader } from '../components/PageHeader';
+import { partOfSpeechLabel } from '../lib/partOfSpeech';
 import { meaningRepository } from '../repositories/meaningRepository';
 import { wordRepository } from '../repositories/wordRepository';
 import {
@@ -123,7 +124,7 @@ export function LexiconEntryDetailPage() {
         {groupedSenses.map((group) => (
           <div key={group.partOfSpeech}>
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {group.partOfSpeech}
+              {partOfSpeechLabel(group.partOfSpeech)}
             </div>
             <div className="space-y-2">
               {group.senses.map((sense) => (
