@@ -6,6 +6,7 @@ import { meaningRepository } from '../repositories/meaningRepository';
 import { wordRepository } from '../repositories/wordRepository';
 import { useAuth } from '../auth/AuthContext';
 import { db } from '../db/db';
+import { ReviewFlowPicker } from '../components/ReviewFlowPicker';
 
 export function ReviewModePage() {
   const { user } = useAuth();
@@ -48,6 +49,7 @@ export function ReviewModePage() {
   return (
     <>
       <PageHeader title="背诵" subtitle={`当前有 ${meaningCount} 个释义可以进入复习。`} />
+      <ReviewFlowPicker />
       <div className="space-y-4">
         <Link
           to="/review/adaptive"

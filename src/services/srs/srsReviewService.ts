@@ -15,7 +15,7 @@ import {
   updatePerformanceProfile
 } from '../personalization/personalizationEngine';
 import { getCurrentOwnerUserId } from '../ownership/ownership';
-import { advanceReviewRun, type ReviewRun } from '../../core/reviewRun';
+import { advanceReviewRun, ratingWithHint, recordsIndependentEvidence, type ReviewRun } from '../../core/reviewRun';
 
 interface ReviewContext {
   word: Word;
@@ -29,6 +29,7 @@ interface ReviewContext {
   confidence?: number;
   inputValue?: string;
   errorType?: ReviewErrorType;
+  hintUsed?: boolean;
 }
 
 export function resolveEnZhRatings(
@@ -53,8 +54,10 @@ async function applyMeaningReview({
   responseTimeMs,
   confidence,
   inputValue,
-  errorType
+  errorType,
+  hintUsed = false
 }: ReviewContext): Promise<void> {
+  rating = ratingWithHint(rating, hintUsed);
   let previousState = await db.meaningReviewStates.get(meaning.id);
   if (previousState && (previousState.localOwnerUserId ?? null) !== getCurrentOwnerUserId()) {
     previousState = undefined;
@@ -67,6 +70,13 @@ async function applyMeaningReview({
     reviewedAt
   );
 
+  const support = previousState?.fsrsData?.studySupport;
+  const previousSupport = support && typeof support === 'object' && !Array.isArray(support)
+    ? support as Record<string, unknown> : {};
+  outcome.state.fsrsData = { ...outcome.state.fsrsData, studySupport: {
+    ...previousSupport, lastHintUsed: hintUsed,
+    ...(!hintUsed && (rating === 'good' || rating === 'easy') ? { lastIndependentAt: reviewedAt } : {})
+  } };
   await db.meaningReviewStates.put(outcome.state);
   const recordId = createId();
   await db.reviewRecords.add({
@@ -81,6 +91,7 @@ async function applyMeaningReview({
     confidence,
     inputValue,
     errorType,
+    hintUsed,
     localOwnerUserId: getCurrentOwnerUserId(),
     previousDueAt: previousState?.dueAt,
     nextDueAt: outcome.nextDueAt,
@@ -99,17 +110,20 @@ async function applyMeaningReview({
   }
 
   const previousProfile = await db.performanceProfiles.get(meaning.id);
-  const nextProfile = updatePerformanceProfile(previousProfile, {
-    meaningId: meaning.id,
-    questionType,
-    correct: rating !== 'again',
-    fsrsDifficulty: outcome.difficulty,
-    lapses: outcome.lapses,
-    responseTimeMs,
-    confidence,
-    reviewedAt
-  });
-  await db.performanceProfiles.put(nextProfile);
+  // Recognising a hinted answer is not evidence of independent recall.
+  const nextProfile = recordsIndependentEvidence(hintUsed, rating)
+    ? updatePerformanceProfile(previousProfile, {
+        meaningId: meaning.id,
+        questionType,
+        correct: rating !== 'again',
+        fsrsDifficulty: outcome.difficulty,
+        lapses: outcome.lapses,
+        responseTimeMs,
+        confidence,
+        reviewedAt
+      })
+    : previousProfile;
+  if (nextProfile) await db.performanceProfiles.put(nextProfile);
   await db.meaningDifficulties.put(
     calculateDifficulty(nextProfile, outcome.state, outcome.difficulty)
   );
@@ -220,6 +234,7 @@ export async function submitAdaptiveWordReview(input: {
     inputValue: string;
   }>;
   responseTimeMs: number;
+  hintUsed?: boolean;
   recordEnZhSession?: boolean;
   reviewRun?: { id: string; sessionId: string; taskId: string };
 }): Promise<ReviewRun | undefined> {
@@ -261,7 +276,7 @@ export async function submitAdaptiveWordReview(input: {
         throw new Error('义项已变更，请重新开始复习');
       }
       await applyMeaningReview({
-        word: input.word, meaning: stored, rating: item.rating,
+        word: input.word, meaning: stored, rating: item.rating, hintUsed: input.hintUsed,
         mode: input.questionType === 'en-to-zh' ? 'en-to-zh' : 'zh-to-en',
         questionType: input.questionType, reviewedAt,
         desiredRetention: settings.desiredRetention,

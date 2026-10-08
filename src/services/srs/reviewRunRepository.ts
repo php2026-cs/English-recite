@@ -1,7 +1,7 @@
 import { db } from '../../db/db';
 import { createId } from '../../lib/id';
 import type { ReviewRun, ReviewRunMode } from '../../core/reviewRun';
-import { advanceChoiceRun } from '../../core/reviewRun';
+import { advanceChoiceRun, buildRunQueue } from '../../core/reviewRun';
 import { getCurrentOwnerUserId } from '../ownership/ownership';
 import { settingsRepository } from '../../repositories/settingsRepository';
 import { buildReviewWordQueue } from './reviewQueue';
@@ -50,13 +50,11 @@ async function readOrCreateRun(mode: ReviewRunMode): Promise<{ run: ReviewRun; r
     }
     const items = buildReviewWordQueue(words, meanings, states, { dailyNewMeaningLimit: settings.dailyNewMeaningLimit })
       .map((item) => ({ ...item, retry: 0, taskId: createId() }));
-    const queue = [
-      ...items.map(item => ({ ...item, phase: 'choice' as const })),
-      ...items.map(item => ({ ...item, phase: 'input' as const, taskId: createId() }))
-    ];
+    const flow = settings.reviewFlow === 'recall-first' ? 'recall-first' : 'two-rounds';
+    const queue = buildRunQueue(items, flow, createId);
     const run: ReviewRun = {
       id: reviewRunKey(mode, owner), sessionId: createId(), localOwnerUserId: owner,
-      mode, status: queue.length ? 'active' : 'finished', queue, index: 0,
+      mode, flow, status: queue.length ? 'active' : 'finished', queue, index: 0,
       initialWordCount: items.length, completedWords: 0, completedMeanings: 0,
       completedRetries: 0, unresolvedMeaningIds: [], updatedAt: Date.now()
     };

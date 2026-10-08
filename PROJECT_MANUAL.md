@@ -2,7 +2,7 @@
 
 > 本文面向下一任开发/维护者，说明当前项目已经完成什么、如何运行、架构是什么、还存在哪些已知问题，以及下一阶段应该如何继续。
 
-> 最新本地验收：2026-09-12，30 个测试文件、145 项测试通过；两轮复习见第 28 节，词典加载优化见第 27 节。GitHub Pages 适配见第 26 节。早期部署记录仅代表当时状态，不能作为当前线上状态证明。
+> 最新本地验收：2026-10-05，33 个测试文件、167 项测试通过；可选「直接回忆」练习方式见第 31 节，两轮复习见第 28 节，词典加载优化见第 27 节。GitHub Pages 适配见第 26 节。早期部署记录仅代表当时状态，不能作为当前线上状态证明。
 
 ## 1. 项目定位
 
@@ -433,11 +433,11 @@ npm run lexicon:build -- --source <endict目录>
 npm run lexicon:validate
 ```
 
-## 17. 当前测试状态（2026-09-12）
+## 17. 当前测试状态（2026-10-05）
 
 ```text
-Test Files  30
-Tests       145
+Test Files  33
+Tests       167
 ```
 
 测试覆盖：
@@ -817,3 +817,77 @@ node scripts/verify-adaptive-review.mjs
 - 添加单词页输入部分英文拼写后展示多个本地候选，优先完整匹配和前缀匹配，显示简短中文释义并可展开更多结果。选词后自动读取释义；无匹配时保留原有在线查询和手动添加。词库仍按需加载。
 - 修改搜索词会清空上一单词的候选和音标，过期异步查询不会覆盖当前词。
 - 验证：145 项单元测试及生产构建通过；浏览器验证双义项原地保存、已加入禁选、离开再返回保留状态、charg 匹配 charge/discharge、选词加载及更改查询后清空旧释义；桌面和 390px 手机布局检查通过。
+
+## 31. 可选「直接回忆」练习方式（2026-10-05）
+
+### 交互
+
+- `/review` 模式选择页新增 `ReviewFlowPicker`，可选「先选后填」（原两轮，默认）或「直接回忆」。设置存在 `settings.reviewFlow`，**仅本机保存，不参与云同步**；更改只对下一轮生效，已在进行的本轮保留原方式。
+- 「直接回忆」轮次只排输入轮：`buildRunQueue()` 对 `recall-first` 只生成整批 `phase: 'input'` 任务，不再有选择轮。答题页顶部显示「直接回忆 · 第 N / M 个单词」。
+- 想不起来时可点「给我选项」（`RecallChoiceHint`）。选项在点击后才通过动态导入本地词典生成，复用两轮模式的选择题逻辑（含干扰项与稳定乱序）。
+- 英译中一格一个释义；选项标签是「词性 + 释义」，填入空格时只取释义（`choiceAnswerText` 统一该格式约定）。中译英/拼写填入英文单词。
+- 一个选项可能对应多个完全相同的义项（`buildReviewChoices` 会合并）。点选后该选项覆盖的所有空格都会填上，避免重复义项永远答不对。
+- 干扰项只作用于当前空格，之后焦点按顺序后移；当前空格不在本题时回退到第一格，不再显示「第 0 格」。
+- 用过提示的题目在揭晓后禁用「记得」「熟练」，并提示本题不计为独立掌握。
+
+### 数据与一致性
+
+- 提示状态 `hintUsed` 随本机草稿保存与恢复（`reviewDraft.ts`），类型异常时整份草稿作废。组件按 `taskId` 重挂载，因此每道题从零开始。
+- 恢复草稿时对评分再套一次 `ratingWithHint`，避免出现「记得」已按下且被禁用的自相矛盾状态。
+- 评分降级：`ratingWithHint()` 把借助提示的 `good`/`easy` 降为 `hard`；`again` 保持不变。降级在界面（`reviewRun.ts`）与写入层（`srsReviewService.applyMeaningReview`）各做一次，幂等。
+- 表现画像：`recordsIndependentEvidence()` 判定借助提示答对**不**更新 `performanceProfiles`（识别不等于独立回忆）；答错仍然计入。
+- `MeaningReviewState.fsrsData.studySupport` 追加 `lastHintUsed`，独立答对时追加 `lastIndependentAt`；合并时保留既有 `weaknesses`。该结构随 `fsrs_data` 云同步。
+- `ReviewRecord.hintUsed` 每次复习都会写入本机记录，但**没有对应云端列**（`supabaseMappers`/迁移均未包含），跨设备拉取不会带回该字段。如需服务端分析，要先加迁移列。
+- 旧会话缺少 `flow` 字段时保持原两轮流程：`isRecallFirst()` 统一判定，`reviewRunRepository` 在建轮时把设置归一化为 `'two-rounds'`，所有消费方测试 `isRecallFirst(run)`。
+
+### 设计取舍
+
+「给我选项」会直接列出正确答案，这是有意设计：它的用途是把「完全回忆不出」的题降级成一次辨认练习，而不是提供部分线索。相应的保护是评分降级为「困难」、不计独立掌握、不更新表现画像。若希望提示只给部分线索（首字母、长度），需要改 `RecallChoiceHint` 的取词方式，属于产品决策而非缺陷修复。
+
+### 验证
+
+```text
+npm test        33 files / 167 tests passed
+npm run build   passed（原有 CET6 整包警告仍存在）
+node scripts/verify-recall-first.mjs
+```
+
+浏览器验收需要开发服务器与 Playwright；`playwright` 目前**不在** `package.json` 中，需要外部提供并用 `PLAYWRIGHT_MODULE` 指向：
+
+```text
+npm run dev -- --host 127.0.0.1 --port 4181 --strictPort
+PLAYWRIGHT_MODULE=<playwright 包的 index.mjs 文件 URL> node scripts/verify-recall-first.mjs
+```
+
+覆盖：只排输入轮、未点提示前无选项、提示面板文案、按完整标签点选正确选项填入对应空格、借助提示后「记得/熟练」禁用、提示降级为 `hard`、独立作答仍为 `good`、表现画像只记录独立作答、`lastHintUsed`/`lastIndependentAt` 入库、旧会话缺少 `flow` 仍走两轮、390px 无横向溢出、减少动态效果、无未捕获异常。报告在 `reports/recall-first/`（该目录不入库，见第 33 节）。
+
+### 已知未完成
+
+- 「直接回忆」用过提示的义项仍计入 `completedMeanings`，且不会进入错义项再练（再练只收「忘记」）。如需在结算页区分「借助提示」，要给 `advanceReviewRun` 增加计数字段。
+- 练习方式只能从 `/review` 修改，设置页未提供入口。
+- 修改练习方式不会重建已存在的本轮（符合「对下一轮生效」的说明）；要立即切换需先「结束本轮」。
+
+## 32. 薄弱点标记与登录错误提示（补记，2026-10-05）
+
+此前两个提交缺少说明书章节，这里补记。
+
+- 词库/添加单词/释义编辑可标记每个义项的薄弱点：`认不出中文`、`拼不出英文`、`容易混淆`（`core/studySupport.ts` 的 `WEAKNESS_LABELS`，界面组件 `WeaknessPicker`）。
+- 标记存放在 `MeaningReviewState.fsrsData.studySupport.weaknesses`，因此随现有 `fsrs_data` 列云同步，并在 JSON 备份中随 `meaningReviewStates` 一起导出，不需要新的数据库版本或迁移。
+- 读取时通过 `normalizeWeaknesses()` 过滤未知值并去重，跨设备或旧数据中的脏值不会进入界面。
+- 自适应出题会参考薄弱点：只标记「认不出中文」时优先英译中，只标记「拼不出英文」时优先拼写题；两种都标记则交回原有自适应逻辑（`preferredWeaknessDirection` 返回 `undefined`）。`WeaknessPicker` 与 `MeaningCard` 分别用于编辑与展示。
+- 登录失败会给出可操作的中文说明（`auth/authErrors.ts`），并处理需要邮箱确认的注册流程。
+- 覆盖这些行为的测试：`core/studySupport.test.ts`、`auth/authErrors.test.ts`；`services/sync/supabaseMappers.test.ts` 断言薄弱点经由 `reviewStateToRemote`/`reviewStateFromRemote` 往返不丢失。
+
+## 33. 当前可复核性缺口（待办，2026-10-05）
+
+以下问题在 2026-10-05 的接管审计中确认，尚未修复：
+
+1. **浏览器验收脚本无法开箱运行**：`scripts/verify-*.mjs` 依赖 `playwright`，但它不在 `package.json`，本机也没有 `node_modules/playwright`。7 个脚本都需要外部 Playwright 与 `PLAYWRIGHT_MODULE`。
+2. **验收证据不入库**：`.gitignore` 忽略 `reports/`，但本说明书 20 多处引用 `reports/*`。全新克隆无法复核任何历史验收结论。
+3. **`supabase/schema.sql` 是过期陷阱**：它缺少 `profiles`/`user_words`/`user_meanings` 三张表，`meaning_review_states` 主键与类型和 `migrations/001` 不一致，`review_records` 缺少 `correct`/`previous_due_at`/`next_due_at`/`response_time_ms`/`created_at`。照它建库会让每次推送以 `PGRST204` 失败。测试只校验 `migrations/`（`supabaseSchema.test.ts`），没有任何守护覆盖该文件。**以 `migrations/` 为准。**
+4. **`npm run lexicon:validate` 在全新克隆上会失败**：它读取被忽略的 `reports/cet6-unmatched.json`。CI（`pages.yml`）也只跑 `npm test` 与构建，不跑该命令。
+5. **提醒链路端到端未实现**：`supabase/functions/send-review-reminders/index.ts` 仍是骨架（`webPush = null`、`fetchDueUsers` 返回 `['demo-user']`、`countDueMeanings` 返回 0、`getSubscriptions` 返回 `[]`）；`cron.sql` 含未替换的 `<PROJECT_REF>` 占位符、缺少 `create extension pg_net/pg_cron`，并使用并非 Vault 读取路径的 `vault.get()`。
+6. **推送深链指向遗留页**：`appUrl()` 默认 `/review/today`，提醒负载也硬编码该地址，而界面主入口是 `/review`。
+7. **词典数据质量**：约 30% 的义项 `partOfSpeech` 为 `other`（`a.` 未被映射），`englishDefinition` 全为空，存在 1 条非中文释义（`ounce` 的 `"Г"`）与 96 条西里尔字母音标。
+
+第 18、19 节列出的既有待办（真机推送、Cron、跨用户 RLS、IELTS 词库）仍然有效。

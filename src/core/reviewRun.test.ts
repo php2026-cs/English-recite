@@ -68,4 +68,13 @@ describe('本轮错义项再练', () => {
     expect(run.unresolvedMeaningIds).toEqual([]);
     expect(run.completedRetries).toBe(1);
   });
+  it('再练题沿用当前题目的阶段与方向，直接回忆轮不会退回选择轮', () => {
+    const run = createRun(1);
+    run.flow = 'recall-first';
+    run.queue = run.queue.map(task => ({ ...task, phase: 'input' as const, direction: 'zh-en' as const }));
+    const next = advanceReviewRun(run, run.queue[0].meanings.map((meaning) => ({ meaning, rating: 'again' })), 'retry');
+    expect(next.queue[1].phase).toBe('input');
+    expect(next.queue[1].direction).toBe('zh-en');
+    expect(next.queue[1].retry).toBe(1);
+  });
 });

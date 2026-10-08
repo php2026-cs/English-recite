@@ -11,6 +11,7 @@ export interface ReviewDraft {
   ratings: Record<string, ReviewRating>;
   confidence: Record<string, number>;
   elapsedMs: number;
+  hintUsed?: boolean;
 }
 
 export function reviewDraftKey(run: ReviewRun): string {
@@ -22,6 +23,7 @@ export function readReviewDraft(run: ReviewRun): ReviewDraft | undefined {
     const value = JSON.parse(localStorage.getItem(reviewDraftKey(run)) ?? 'null') as ReviewDraft | null;
     if (value?.version !== 1 || !value.answers || !value.ratings || !value.confidence ||
       !Number.isFinite(value.elapsedMs) || value.elapsedMs < 0 || typeof value.revealed !== 'boolean') return undefined;
+    if (value.hintUsed !== undefined && typeof value.hintUsed !== 'boolean') return undefined;
     if (Object.values(value.answers).some((answer) => typeof answer !== 'string') ||
       Object.values(value.ratings).some((rating) => !['again', 'hard', 'good', 'easy'].includes(rating)) ||
       Object.values(value.confidence).some((score) => !Number.isFinite(score) || score < 0 || score > 3)) return undefined;

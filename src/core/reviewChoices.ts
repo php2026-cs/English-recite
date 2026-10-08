@@ -3,6 +3,16 @@ import type { ReviewRunItem } from './reviewRun';
 import { normalizeChinese } from '../lib/strings';
 
 export interface ReviewChoice { id: string; label: string; sourceWord: string; meaningIds: string[] }
+
+// Options label a sense as "<partOfSpeech> <chineseMeaning>" so the part of speech
+// stays visible, but only the gloss itself may be inserted into a slot.
+export function stripPartOfSpeech(label: string): string {
+  return label.replace(/^\S+\s+/, '');
+}
+
+export function choiceAnswerText(option: ReviewChoice, direction: 'en-zh' | 'zh-en'): string {
+  return direction === 'zh-en' ? option.label : stripPartOfSpeech(option.label);
+}
 export function spellingDistance(a: string, b: string): number {
   let row = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {

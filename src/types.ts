@@ -91,6 +91,7 @@ export interface MeaningReviewState {
 
 export interface UserSettings {
   id: 'app';
+  reviewFlow?: 'two-rounds' | 'recall-first';
   dailyNewMeaningLimit: number;
   desiredRetention: number;
   dailyReminderEnabled: boolean;

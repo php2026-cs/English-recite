@@ -10,7 +10,9 @@ import { getLexiconAliases } from '../services/lexicon/lexiconAliases';
 import { buildAdaptiveWordQuestion } from '../services/personalization/reviewController';
 import { submitAdaptiveWordReview } from '../services/srs/srsReviewService';
 import type { ReviewRating } from '../types';
-import type { ReviewRun } from '../core/reviewRun';
+import { isRecallFirst, ratingWithHint, type ReviewRun } from '../core/reviewRun';
+import { choiceAnswerText } from '../core/reviewChoices';
+import { RecallChoiceHint } from './RecallChoiceHint';
 import { readReviewDraft, useReviewDraft } from '../services/srs/reviewDraft';
 
 const RATINGS: Array<{ rating: ReviewRating; label: string }> = [
@@ -25,9 +27,11 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
   const [initial] = useState(() => readReviewDraft(run));
   const [question, setQuestion] = useState<ReviewQuestion | null>(initial?.question ?? null);
   const [answers, setAnswers] = useState<string[]>([initial?.answers.english ?? '']);
+  const [hintUsed, setHintUsed] = useState(initial?.hintUsed ?? false);
   const [results, setResults] = useState<AdaptiveMeaningResult[] | null>(() => initial?.revealed && initial.question && initial.question.questionType !== 'en-to-zh'
     ? evaluateAdaptiveWordAnswers(item.word.word, item.meanings, initial.question.questionType, [initial.answers.english ?? '']) : null);
-  const [ratings, setRatings] = useState<Record<string, ReviewRating>>(initial?.ratings ?? {});
+  const [ratings, setRatings] = useState<Record<string, ReviewRating>>(() => Object.fromEntries(
+    Object.entries(initial?.ratings ?? {}).map(([meaningId, rating]) => [meaningId, ratingWithHint(rating, initial?.hintUsed)])));
   const [confidence, setConfidence] = useState<Record<string, number>>(initial?.confidence ?? {});
   const [elapsedMs, setElapsedMs] = useState(initial?.elapsedMs ?? 0);
   const [saving, setSaving] = useState(false);
@@ -39,7 +43,7 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
   const active = useRef(true);
   const baseElapsed = initial?.elapsedMs ?? 0;
   const draft = useReviewDraft(run, { question: question ?? undefined, answers: { english: answers[0] ?? '' },
-    revealed: results !== null, ratings, confidence }, () => submitted.current ? elapsedMs : baseElapsed + timer.current.getElapsedMs(),
+    revealed: results !== null, ratings, confidence, hintUsed }, () => submitted.current ? elapsedMs : baseElapsed + timer.current.getElapsedMs(),
     question !== null && question.questionType !== 'en-to-zh');
 
   useEffect(() => {
@@ -82,7 +86,7 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
     const evaluated = evaluateAdaptiveWordAnswers(item.word.word, item.meanings,
       question.questionType, answers, getLexiconAliases(item.word.word, item.meanings));
     setResults(evaluated);
-    setRatings(Object.fromEntries(evaluated.map((result) => [result.meaning.id, result.correct ? 'good' : 'again'])));
+    setRatings(Object.fromEntries(evaluated.map((result) => [result.meaning.id, ratingWithHint(result.correct ? 'good' : 'again', hintUsed)])));
   }
 
   async function save() {
@@ -93,7 +97,7 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
     try {
       const nextRun = await submitAdaptiveWordReview({ word: item.word, questionType: question.questionType,
         reviewRun: { id: run.id, sessionId: run.sessionId, taskId: item.taskId },
-        responseTimeMs: elapsedMs,
+        responseTimeMs: elapsedMs, hintUsed,
         results: results.map((result) => ({ meaning: result.meaning,
           rating: ratings[result.meaning.id], confidence: confidence[result.meaning.id],
           inputValue: result.inputValue }))
@@ -145,11 +149,14 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
         </div>)}
       </div>
       {!results && <>
+        {isRecallFirst(run) && <RecallChoiceHint item={item} direction="zh-en" used={hintUsed}
+          onUse={() => setHintUsed(true)} onChoose={option => setAnswers([choiceAnswerText(option, 'zh-en')])} />}
         <Button type="submit" disabled={!answers.some((answer) => answer.trim())} className="mt-5 w-full">提交答案</Button>
         <Button variant="ghost" onClick={() => submit(true)} className="mt-2 w-full">想不起来，查看答案</Button>
       </>}
     </form>
     {results && <div className="mt-6">
+      {hintUsed && <p className="mb-3 text-sm text-amber-700">本题借助了选项提示，按“困难”或“忘记”安排后续练习，不计为独立掌握。</p>}
       <div role="status" className="rounded-xl bg-slate-50 p-4">
         <p className="mb-2 font-semibold text-slate-900">正确答案：{item.word.word}</p>
         <p className="font-medium text-slate-700">匹配 {results.filter((result) => result.correct).length} / {results.length} 个义项</p>
@@ -160,7 +167,7 @@ export function AdaptiveWordQuestion({ run, onSaved }: {
         <legend className="px-1 text-sm font-medium text-slate-600">义项 {i + 1} · {result.correct ? '✓ 已匹配' : '未匹配'}</legend>
         <p className="mb-4 text-lg font-semibold text-slate-900"><span className="mr-2 text-sm text-brand-700">{result.meaning.partOfSpeech}</span>{result.meaning.chineseMeaning}</p>
         <div className="grid grid-cols-4 gap-2" role="group" aria-label={`义项 ${i + 1} 评分`}>
-          {RATINGS.map(({ rating, label }) => <Button key={rating} disabled={saving} className="px-1"
+          {RATINGS.map(({ rating, label }) => <Button key={rating} disabled={saving || (hintUsed && (rating === 'good' || rating === 'easy'))} className="px-1"
             aria-pressed={ratings[result.meaning.id] === rating}
             variant={ratings[result.meaning.id] === rating ? 'primary' : 'secondary'}
             onClick={() => setRatings((values) => ({ ...values, [result.meaning.id]: rating }))}>{label}</Button>)}

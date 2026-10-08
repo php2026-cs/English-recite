@@ -3,6 +3,7 @@ import type { UserSettings } from '../types';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   id: 'app',
+  reviewFlow: 'two-rounds',
   dailyNewMeaningLimit: 20,
   desiredRetention: 0.9,
   dailyReminderEnabled: false,
@@ -15,7 +16,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
 export const settingsRepository = {
   async get(): Promise<UserSettings> {
     const saved = await db.settings.get('app');
-    return saved ?? DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, ...saved };
   },
 
   async update(patch: Partial<UserSettings>): Promise<UserSettings> {

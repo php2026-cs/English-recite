@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { type ReviewRun, type ReviewRunMode, MAX_RETRIES } from '../core/reviewRun';
+import { type ReviewRun, type ReviewRunMode, MAX_RETRIES, isRecallFirst } from '../core/reviewRun';
 import { loadReviewRun, finishReviewRun } from '../services/srs/reviewRunRepository';
 import { PageHeader } from './PageHeader';
 import { EmptyState } from './EmptyState';
@@ -66,10 +66,12 @@ function OwnedRun({ mode }: { mode: ReviewRunMode }) {
   return <>
     <PageHeader title={title} subtitle={current.phase === 'choice' ? `第一轮 · 选择辨认 · 第 ${run.index + 1} / ${run.initialWordCount} 个单词` : current.retry > 0
       ? `错义项再练 ${current.retry} / ${MAX_RETRIES} · 本题 ${current.meanings.length} 个义项`
-      : `${current.phase === 'input' ? '第二轮 · 输入回忆 · ' : ''}第 ${run.completedWords + 1} / ${run.initialWordCount} 个单词 · 本题 ${current.meanings.length} 个义项`} />
+      : `${isRecallFirst(run) ? '直接回忆 · ' : current.phase === 'input' ? '第二轮 · 输入回忆 · ' : ''}第 ${run.completedWords + 1} / ${run.initialWordCount} 个单词 · 本题 ${current.meanings.length} 个义项`} />
     <div className="mb-4 rounded-2xl border border-brand-100 bg-brand-50 p-3">
       <p className="text-sm font-medium text-brand-800">{resumed ? '已恢复上次进度' : '本轮进度自动保留'}</p>
-      <p className="mt-1 text-xs leading-5 text-brand-700">先完成全部选择题，再输入同一批单词的答案。输入轮评分后安排复习；忘记的义项最多再练 2 次。</p>
+      <p className="mt-1 text-xs leading-5 text-brand-700">{isRecallFirst(run)
+        ? '先独立输入，需要时点“给我选项”。用过提示的题会记录为借助提示完成；忘记的义项最多再练 2 次。'
+        : '先完成全部选择题，再输入同一批单词的答案。输入轮评分后安排复习；忘记的义项最多再练 2 次。'}</p>
       <div className="mt-3 flex flex-wrap gap-3">
         <Link to="/review" className="inline-flex h-9 items-center rounded-lg border border-brand-200 bg-white px-3 text-sm text-brand-700">暂存退出</Link>
         <Button variant="ghost" size="sm" disabled={ending} onClick={() => void finish()}>{ending ? '结束中…' : '结束本轮'}</Button>

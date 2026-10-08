@@ -2,6 +2,7 @@ import type { ReviewWordItem } from '../services/srs/reviewQueue';
 import type { Meaning, ReviewRating } from '../types';
 
 export type ReviewRunMode = 'en-zh' | 'zh-en' | 'adaptive';
+export type ReviewFlow = 'two-rounds' | 'recall-first';
 export interface ReviewRunItem extends ReviewWordItem {
   taskId: string;
   retry: number;
@@ -13,6 +14,7 @@ export interface ReviewRun {
   sessionId: string;
   localOwnerUserId: string | null;
   mode: ReviewRunMode;
+  flow?: ReviewFlow;
   status: 'active' | 'finished';
   queue: ReviewRunItem[];
   index: number;
@@ -25,6 +27,29 @@ export interface ReviewRun {
 }
 export const RETRY_GAP = 3;
 export const MAX_RETRIES = 2;
+
+export function buildRunQueue(items: ReviewRunItem[], flow: ReviewFlow, createTaskId: () => string): ReviewRunItem[] {
+  const input = items.map(item => ({ ...item, phase: 'input' as const, taskId: createTaskId() }));
+  return flow === 'recall-first' ? input : [
+    ...items.map(item => ({ ...item, phase: 'choice' as const })), ...input
+  ];
+}
+
+// Runs created before the optional flow existed have no `flow`, and must keep the
+// original choice-then-input behaviour.
+export function isRecallFirst(run: { flow?: ReviewFlow }): boolean {
+  return run.flow === 'recall-first';
+}
+
+export function ratingWithHint(rating: ReviewRating, hintUsed = false): ReviewRating {
+  return hintUsed && (rating === 'good' || rating === 'easy') ? 'hard' : rating;
+}
+
+// A hinted success shows recognition, not independent recall, so it must not
+// upgrade the performance profile. A hinted failure is still real evidence.
+export function recordsIndependentEvidence(hintUsed: boolean, rating: ReviewRating): boolean {
+  return !hintUsed || rating === 'again';
+}
 
 export function advanceChoiceRun(run: ReviewRun, direction: 'en-zh' | 'zh-en'): ReviewRun {
   const current = run.queue[run.index];

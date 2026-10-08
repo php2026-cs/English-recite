@@ -7,7 +7,9 @@ import { createReviewTimer } from '../core/reviewTimer';
 import { getLexiconAliases } from '../services/lexicon/lexiconAliases';
 import { findStudyExample, isFirstStudy } from '../services/lexicon/studyExamples';
 import { submitAdaptiveWordReview } from '../services/srs/srsReviewService';
-import type { ReviewRun } from '../core/reviewRun';
+import { isRecallFirst, ratingWithHint, type ReviewRun } from '../core/reviewRun';
+import { choiceAnswerText, type ReviewChoice } from '../core/reviewChoices';
+import { RecallChoiceHint } from './RecallChoiceHint';
 import type { ReviewQuestion } from '../core/adaptiveReview';
 import { readReviewDraft, useReviewDraft } from '../services/srs/reviewDraft';
 import { reviewStateRepository } from '../services/srs/reviewState';
@@ -44,9 +46,12 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
     [meaning.id, await reviewStateRepository.get(meaning.id)] as const))), [item]);
   const slots = useMemo(() => groups.flatMap((group) => group.meanings), [groups]);
   const [answers, setAnswers] = useState<Record<string, string>>(initial?.answers ?? {});
+  const [hintUsed, setHintUsed] = useState(initial?.hintUsed ?? false);
+  const [activeSlot, setActiveSlot] = useState(slots[0]?.id ?? '');
   const [results, setResults] = useState<EnZhSlotResult[] | null>(() => initial?.revealed
     ? evaluateEnZhSlots(item.meanings, initial.answers, getLexiconAliases(item.word.word, item.meanings)) : null);
-  const [ratings, setRatings] = useState<Record<string, ReviewRating>>(initial?.ratings ?? {});
+  const [ratings, setRatings] = useState<Record<string, ReviewRating>>(() => Object.fromEntries(
+    Object.entries(initial?.ratings ?? {}).map(([meaningId, rating]) => [meaningId, ratingWithHint(rating, initial?.hintUsed)])));
   const [confidence, setConfidence] = useState<Record<string, number>>(initial?.confidence ?? {});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +62,7 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
   const saveLock = useRef(false);
   const active = useRef(true);
   const firstInput = useRef<HTMLInputElement>(null);
-  const draft = useReviewDraft(run, { answers, revealed: results !== null, ratings, confidence, question },
+  const draft = useReviewDraft(run, { answers, revealed: results !== null, ratings, confidence, question, hintUsed },
     () => revealed.current ? elapsed.current : baseElapsed + timer.current.getElapsedMs());
 
   useEffect(() => {
@@ -69,7 +74,7 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
     setAliasError(null);
     try {
       await personalVocabularyRepository.accept(result.meaning, result.input);
-      if (active.current) setRatings((values) => ({ ...values, [result.meaning.id]: 'good' }));
+      if (active.current) setRatings((values) => ({ ...values, [result.meaning.id]: ratingWithHint('good', hintUsed) }));
     } catch {
       if (active.current) setAliasError('表达保存失败，请重试。');
     } finally { if (active.current) setAliasSaving(null); }
@@ -110,7 +115,27 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
     elapsed.current = baseElapsed + timer.current.stop();
     const evaluated = evaluateEnZhSlots(item.meanings, answers, aliases);
     setResults(evaluated);
-    setRatings(Object.fromEntries(evaluated.map((result) => [result.meaning.id, result.correct ? 'good' : 'again'])));
+    setRatings(Object.fromEntries(evaluated.map((result) => [result.meaning.id, ratingWithHint(result.correct ? 'good' : 'again', hintUsed)])));
+  }
+
+  // Fills the slots an option answers. A deduped option stands for several identical
+  // senses, so every one of its slots is filled instead of leaving the rest empty.
+  function applyHintChoice(option: ReviewChoice) {
+    const text = choiceAnswerText(option, 'en-zh');
+    if (option.meaningIds.length) {
+      setAnswers((values) => {
+        const next = { ...values };
+        for (const meaningId of option.meaningIds) next[meaningId] = text;
+        return next;
+      });
+      const filled = new Set(option.meaningIds);
+      setActiveSlot(slots.find((slot) => !filled.has(slot.id))?.id ?? option.meaningIds[0]);
+      return;
+    }
+    // A distractor only affects the slot being edited, then focus moves on in order.
+    setAnswers((values) => ({ ...values, [activeSlot]: text }));
+    const at = slots.findIndex((slot) => slot.id === activeSlot);
+    setActiveSlot(slots[at + 1]?.id ?? slots[0]?.id ?? '');
   }
 
   async function save() {
@@ -121,7 +146,7 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
     try {
       const nextRun = await submitAdaptiveWordReview({
         reviewRun: { id: run.id, sessionId: run.sessionId, taskId: item.taskId },
-        word: item.word, questionType: 'en-to-zh', responseTimeMs: elapsed.current,
+        word: item.word, questionType: 'en-to-zh', responseTimeMs: elapsed.current, hintUsed,
         results: results.map((result) => ({
           meaning: result.meaning, inputValue: result.input,
           rating: ratings[result.meaning.id], confidence: confidence[result.meaning.id]
@@ -177,6 +202,7 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
                 value={answers[slot.id] ?? ''} disabled={results !== null}
                 aria-describedby={result ? `en-zh-feedback-${slot.id}` : undefined}
                 onChange={(event) => setAnswers((values) => ({ ...values, [slot.id]: event.target.value }))}
+                onFocus={() => setActiveSlot(slot.id)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter') return;
                   if (event.nativeEvent.isComposing) { event.preventDefault(); return; }
@@ -211,7 +237,7 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
                 <fieldset disabled={saving} className="mt-3 min-w-0">
                   <legend className="mb-2 text-sm text-slate-500">掌握程度 · {RATINGS.find((rating) => rating.value === selectedRating)?.label}</legend>
                   <div role="group" aria-label={`${result.meaning.chineseMeaning}掌握程度`} className="grid grid-cols-4 gap-2">
-                    {RATINGS.map((rating) => <Button key={rating.value} disabled={saving} className="px-1" size="sm"
+                    {RATINGS.map((rating) => <Button key={rating.value} disabled={saving || (hintUsed && (rating.value === 'good' || rating.value === 'easy'))} className="px-1" size="sm"
                       aria-pressed={selectedRating === rating.value}
                       variant={selectedRating === rating.value ? 'primary' : 'secondary'}
                       onClick={() => setRatings((values) => ({ ...values, [result.meaning.id]: rating.value }))}>
@@ -232,9 +258,15 @@ export function EnZhWordQuestion({ run, onSaved, question }: {
           })}
         </div>
       </section>)}
+      {!results && isRecallFirst(run) && <RecallChoiceHint item={item} direction="en-zh"
+        used={hintUsed} onUse={() => setHintUsed(true)}
+        target={slots.findIndex(slot => slot.id === activeSlot) >= 0
+          ? `第 ${slots.findIndex(slot => slot.id === activeSlot) + 1} 格` : '当前空格'}
+        onChoose={applyHintChoice} />}
       {!results && <Button type="submit" disabled={!personalAliases} className="w-full">查看答案</Button>}
     </form>
     {results && <div className="mt-5">
+      {hintUsed && <p className="mb-3 text-sm text-amber-700">本题借助了选项提示，按“困难”或“忘记”安排后续练习，不计为独立掌握。</p>}
       <p className="mb-3 text-xs leading-5 text-slate-500">每个义项分别保存掌握程度，并据此安排下次复习。</p>
       {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
       <Button onClick={() => void save()} disabled={saving || aliasSaving !== null} className="w-full">
