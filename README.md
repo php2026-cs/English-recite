@@ -79,9 +79,11 @@ npm test
 
 背诵模式页还可以选「直接回忆」：不走选择轮，先独立输入，想不起来时再点“给我选项”。选项按需从本地词典生成，含有干扰项；用过提示的题会降级为“困难”，不计为独立掌握，也不写入表现画像。该开关只对下一轮生效，旧的两轮会话照旧。练习方式仅保存在本机，不参与云同步。实现与验收见 `PROJECT_MANUAL.md` 第 31 节。
 
-性能优化：完整 CET6 词典和词典页面按需加载，复习所需的别名使用独立小索引。首页主脚本约 654 KB（gzip 194 KB），此前约 5.36 MB（gzip 876 KB）。Service Worker 在后台保留完整词典离线缓存，因此这是首屏解析与关键资源的优化，并非删除离线词库。六级列表每次显示 80 个词，搜索仍覆盖全部 7,813 词。词典更新后通过 `npm run lexicon:build` 同时重建别名索引；单元测试检查索引与完整词典一致。
+性能优化：完整 CET6 词典和词典页面按需加载，复习所需的别名使用独立小索引。首页主脚本约 675 KB（gzip 201 KB），此前约 5.36 MB（gzip 876 KB）。Service Worker 在后台保留完整词典离线缓存，因此这是首屏解析与关键资源的优化，并非删除离线词库。六级列表每次显示 80 个词，搜索仍覆盖全部 7,813 词。词典更新后通过 `npm run lexicon:build` 同时重建别名索引；单元测试检查索引与完整词典一致。词性映射与数据清洗规则在 `scripts/lexicon-rules.mjs`，校验由 `npm run lexicon:validate` 完成并已接入 CI；未识别词性在界面显示为「其他词性」，不会把英文 `other` 直接展示给学习者。详见 `PROJECT_MANUAL.md` 第 35 节。
 
 网页发布使用 GitHub Pages，仓库为 `php2026-cs/English-recite`。推送 `main` 后，`.github/workflows/pages.yml` 自动测试、构建和发布；Supabase 继续提供登录和云同步。GitHub 仓库的 Actions variables 配置 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_VAPID_PUBLIC_KEY`，仅允许公开的客户端配置，禁止 service-role 密钥。
+
+云同步按账号隔离，推送登录用户的单词、释义、复习状态与复习记录，并在拉取时只让云端确实存在的字段生效，避免抹掉仅存于本机的题型、信心分与提示标记。删除会清理云端并写入墓碑，但**不会传播到同一账号的其他设备**（它们会保留本地副本）；详见 `PROJECT_MANUAL.md` 第 34 节。
 
 Pages 构建使用 `/English-recite/` 资源路径和 hash 路由，复习地址形如 `/English-recite/#/review/adaptive`，刷新不会请求不存在的服务器路由。PWA 图标、启动路径、缓存和通知链接跟随部署路径。本地与已有 Sites 默认保持根路径和普通路由；`.openai/hosting.json` 保留已有 Sites 项目关联。环境文件不上传源码仓库，Vercel 配置仅作为历史文件保留。
 

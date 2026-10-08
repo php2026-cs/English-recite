@@ -103,11 +103,22 @@ export const wordRepository = {
       db.meanings,
       db.reviewRecords,
       db.reviewSessions,
+      db.syncMeta,
       async () => {
+        // Cascaded rows need their own tombstones, otherwise their cloud rows
+        // survive and the next pull re-creates them as orphans.
+        const meanings = await db.meanings.where('wordId').equals(wordId).toArray();
+        const records = await db.reviewRecords.where('wordId').equals(wordId).toArray();
         await db.meanings.where('wordId').equals(wordId).delete();
         await db.reviewRecords.where('wordId').equals(wordId).delete();
         await db.reviewSessions.where('wordId').equals(wordId).delete();
         await db.words.delete(wordId);
+        for (const meaning of meanings) {
+          await syncMetaRepository.markDeleted(`meaning:${meaning.id}`);
+        }
+        for (const record of records) {
+          await syncMetaRepository.markDeleted(`review:${record.id}`);
+        }
         await syncMetaRepository.markDeleted(`word:${wordId}`);
       }
     );

@@ -80,10 +80,14 @@ export const meaningRepository = {
   async remove(meaningId: string): Promise<void> {
     const existing = await db.meanings.get(meaningId);
     if (!existing) return;
-    await db.transaction('rw', db.meanings, db.reviewRecords, db.words, async () => {
+    await db.transaction('rw', db.meanings, db.reviewRecords, db.words, db.syncMeta, async () => {
+      const records = await db.reviewRecords.where('meaningId').equals(meaningId).toArray();
       await db.reviewRecords.where('meaningId').equals(meaningId).delete();
       await db.meanings.delete(meaningId);
       await db.words.update(existing.wordId, { updatedAt: now() });
+      for (const record of records) {
+        await syncMetaRepository.markDeleted(`review:${record.id}`);
+      }
       await syncMetaRepository.markDeleted(`meaning:${meaningId}`);
     });
   }

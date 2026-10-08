@@ -1,13 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { db } from '../../db/db';
-import type {
-  Meaning,
-  MeaningReviewState,
-  ReviewRecord,
-  Word
-} from '../../types';
+import { db, type SyncMeta } from '../../db/db';
+import type { MeaningReviewState, ReviewRecord } from '../../types';
 import {
-  mergeAppendOnlyById,
+  mergeAppendOnlyByIdPreservingLocal,
   resolveLastWriteWins,
   resolveMeaningReviewState
 } from './conflictResolver';
@@ -22,6 +17,9 @@ import {
   wordFromRemote,
   wordToRemote
 } from './supabaseMappers';
+
+// PostgREST caps a response at the project's max-rows setting; page below that cap.
+const FETCH_PAGE_SIZE = 500;
 
 interface CloudWord {
   id: string;
@@ -87,39 +85,84 @@ export class SyncEngine {
 
   async push(userId: string): Promise<void> {
     const dirty = await syncMetaRepository.listDirty();
-    const wordIds = new Set<string>();
-    const meaningIds = new Set<string>();
-    const reviewStateIds = new Set<string>();
-    const recordIds = new Set<string>();
 
     for (const meta of dirty) {
-      const [kind, id] = meta.entityKey.split(':');
-      if (kind === 'word') wordIds.add(id);
-      if (kind === 'meaning') meaningIds.add(id);
-      if (kind === 'review') recordIds.add(id);
-      if (kind === 'review-state') reviewStateIds.add(id);
+      const separator = meta.entityKey.indexOf(':');
+      const kind = meta.entityKey.slice(0, separator);
+      const id = meta.entityKey.slice(separator + 1);
+      // A tombstone means the local row is already gone, so the remote row has to
+      // be removed explicitly. Skipping it here would let the next pull resurrect it.
+      if (kind === 'word') await this.pushWord(userId, id, meta);
+      else if (kind === 'meaning') await this.pushMeaning(userId, id, meta);
+      else if (kind === 'review') await this.pushReviewRecord(userId, id, meta);
+      else if (kind === 'review-state') await this.pushReviewState(userId, id, meta);
     }
+  }
 
-    for (const id of wordIds) {
-      const word = await db.words.get(id);
-      await this.upsertWord(userId, word);
-      await syncMetaRepository.markSynced(`word:${id}`);
+  private async pushWord(userId: string, id: string, meta: SyncMeta): Promise<void> {
+    const word = meta.deletedAt ? undefined : await db.words.get(id);
+    if (word) {
+      const { error } = await this.supabaseClient
+        .from('user_words')
+        .upsert({ ...wordToRemote(word), user_id: userId });
+      if (error) throw error;
+    } else if (meta.deletedAt) {
+      await this.deleteRemote('user_words', userId, 'id', id);
     }
-    for (const id of meaningIds) {
-      const meaning = await db.meanings.get(id);
-      await this.upsertMeaning(userId, meaning);
-      await syncMetaRepository.markSynced(`meaning:${id}`);
+    await syncMetaRepository.markSynced(`word:${id}`, meta.updatedAt);
+  }
+
+  private async pushMeaning(userId: string, id: string, meta: SyncMeta): Promise<void> {
+    const meaning = meta.deletedAt ? undefined : await db.meanings.get(id);
+    if (meaning) {
+      const { error } = await this.supabaseClient
+        .from('user_meanings')
+        .upsert({ ...meaningToRemote(meaning), user_id: userId });
+      if (error) throw error;
+    } else if (meta.deletedAt) {
+      await this.deleteRemote('user_meanings', userId, 'id', id);
     }
-    for (const id of recordIds) {
-      const record = await db.reviewRecords.get(id);
-      await this.insertReviewRecord(userId, record);
-      await syncMetaRepository.markSynced(`review:${id}`);
+    await syncMetaRepository.markSynced(`meaning:${id}`, meta.updatedAt);
+  }
+
+  private async pushReviewRecord(userId: string, id: string, meta: SyncMeta): Promise<void> {
+    const record = meta.deletedAt ? undefined : await db.reviewRecords.get(id);
+    if (record && record.meaningId) {
+      const { error } = await this.supabaseClient
+        .from('review_records')
+        .upsert({ ...reviewRecordToRemote(record), user_id: userId });
+      if (error) throw error;
+    } else if (meta.deletedAt) {
+      await this.deleteRemote('review_records', userId, 'id', id);
     }
-    for (const id of reviewStateIds) {
-      const state = await db.meaningReviewStates.get(id);
-      await this.upsertReviewState(userId, state);
-      await syncMetaRepository.markSynced(`review-state:${id}`);
+    await syncMetaRepository.markSynced(`review:${id}`, meta.updatedAt);
+  }
+
+  private async pushReviewState(userId: string, id: string, meta: SyncMeta): Promise<void> {
+    const state = meta.deletedAt ? undefined : await db.meaningReviewStates.get(id);
+    if (state) {
+      const { error } = await this.supabaseClient
+        .from('meaning_review_states')
+        .upsert({ ...reviewStateToRemote(state), user_id: userId });
+      if (error) throw error;
+    } else if (meta.deletedAt) {
+      await this.deleteRemote('meaning_review_states', userId, 'meaning_id', id);
     }
+    await syncMetaRepository.markSynced(`review-state:${id}`, meta.updatedAt);
+  }
+
+  private async deleteRemote(
+    table: string,
+    userId: string,
+    idColumn: string,
+    id: string
+  ): Promise<void> {
+    const { error } = await this.supabaseClient
+      .from(table)
+      .delete()
+      .eq('user_id', userId)
+      .eq(idColumn, id);
+    if (error) throw error;
   }
 
   async pull(userId: string): Promise<void> {
@@ -170,80 +213,49 @@ export class SyncEngine {
     const localRecords = (await db.reviewRecords.toArray()).filter(
       (record) => (record.localOwnerUserId ?? null) === userId
     );
-    const merged = mergeAppendOnlyById(localRecords, remoteRecords);
+    // Never let a remote row blank out the local-only review fields: they have no
+    // cloud column, so a plain overwrite would destroy them on every pull.
+    const merged = mergeAppendOnlyByIdPreservingLocal(localRecords, remoteRecords);
     for (const record of merged) {
       record.localOwnerUserId = userId;
       await db.reviewRecords.put(record);
     }
   }
 
-  private async upsertWord(userId: string, word?: Word): Promise<void> {
-    if (!word) return;
-    const { error } = await this.supabaseClient
-      .from('user_words')
-      .upsert({ ...wordToRemote(word), user_id: userId });
-    if (error) throw error;
-  }
-
-  private async upsertMeaning(userId: string, meaning?: Meaning): Promise<void> {
-    if (!meaning) return;
-    const { error } = await this.supabaseClient
-      .from('user_meanings')
-      .upsert({ ...meaningToRemote(meaning), user_id: userId });
-    if (error) throw error;
-  }
-
-  private async insertReviewRecord(
-    userId: string,
-    record?: ReviewRecord
-  ): Promise<void> {
-    if (!record || !record.meaningId) return;
-    const { error } = await this.supabaseClient
-      .from('review_records')
-      .upsert({ ...reviewRecordToRemote(record), user_id: userId });
-    if (error) throw error;
-  }
-
-  private async upsertReviewState(
-    userId: string,
-    state?: MeaningReviewState
-  ): Promise<void> {
-    if (!state) return;
-    const { error } = await this.supabaseClient
-      .from('meaning_review_states')
-      .upsert({ ...reviewStateToRemote(state), user_id: userId });
-    if (error) throw error;
-  }
-
   private async fetchWords(userId: string): Promise<CloudWord[]> {
-    const { data } = await this.supabaseClient
-      .from('user_words')
-      .select('*')
-      .eq('user_id', userId);
-    return (data ?? []) as CloudWord[];
+    return this.fetchAll<CloudWord>('user_words', userId, 'updated_at');
   }
 
   private async fetchMeanings(userId: string): Promise<CloudMeaning[]> {
-    const { data } = await this.supabaseClient
-      .from('user_meanings')
-      .select('*')
-      .eq('user_id', userId);
-    return (data ?? []) as CloudMeaning[];
+    return this.fetchAll<CloudMeaning>('user_meanings', userId, 'updated_at');
   }
 
   private async fetchReviewStates(userId: string): Promise<CloudReviewState[]> {
-    const { data } = await this.supabaseClient
-      .from('meaning_review_states')
-      .select('*')
-      .eq('user_id', userId);
-    return (data ?? []) as CloudReviewState[];
+    return this.fetchAll<CloudReviewState>('meaning_review_states', userId, 'updated_at');
   }
 
   private async fetchReviewRecords(userId: string): Promise<ReviewRecord[]> {
-    const { data } = await this.supabaseClient
-      .from('review_records')
-      .select('*')
-      .eq('user_id', userId);
-    return ((data ?? []) as CloudReviewRecord[]).map(reviewRecordFromRemote);
+    // review_records is append-only and has no updated_at column.
+    const rows = await this.fetchAll<CloudReviewRecord>('review_records', userId, 'created_at');
+    return rows.map(reviewRecordFromRemote);
+  }
+
+  // PostgREST truncates a response at the project's max-rows setting, which would
+  // silently drop the remaining rows. Page through with a stable order instead.
+  private async fetchAll<T>(table: string, userId: string, orderColumn: string): Promise<T[]> {
+    const rows: T[] = [];
+    for (let from = 0; ; from += FETCH_PAGE_SIZE) {
+      const { data, error } = await this.supabaseClient
+        .from(table)
+        .select('*')
+        .eq('user_id', userId)
+        .order(orderColumn, { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + FETCH_PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = (data ?? []) as T[];
+      rows.push(...page);
+      if (page.length < FETCH_PAGE_SIZE) return rows;
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 > 本文面向下一任开发/维护者，说明当前项目已经完成什么、如何运行、架构是什么、还存在哪些已知问题，以及下一阶段应该如何继续。
 
-> 最新本地验收：2026-10-05，33 个测试文件、167 项测试通过；可选「直接回忆」练习方式见第 31 节，两轮复习见第 28 节，词典加载优化见第 27 节。GitHub Pages 适配见第 26 节。早期部署记录仅代表当时状态，不能作为当前线上状态证明。
+> 最新本地验收：2026-10-05，34 个测试文件、184 项测试通过；云同步数据安全修复见第 34 节，词典数据质量修复见第 35 节。可选「直接回忆」练习方式见第 31 节，两轮复习见第 28 节，词典加载优化见第 27 节。GitHub Pages 适配见第 26 节。早期部署记录仅代表当时状态，不能作为当前线上状态证明。
 
 ## 1. 项目定位
 
@@ -239,7 +239,7 @@ src/data/lexicon/cet6.json
 目标词：7838
 匹配词：7813
 LexiconEntry：7813
-LexiconSense：40650
+LexiconSense：38833（2026-10-05 清洗后；此前 40650）
 ```
 
 构建命令：
@@ -254,7 +254,7 @@ npm run lexicon:build -- --source <endict目录>
 npm run lexicon:validate
 ```
 
-构建脚本读取 `ismartcoding/endict` 的 CET4 + CET6 词表，生成最终静态 JSON。不要运行 App 时做 NLP 拆分。
+构建脚本读取 `ismartcoding/endict` 的 CET4 + CET6 词表，生成最终静态 JSON。不要运行 App 时做 NLP 拆分。构建结束会自动执行 `scripts/lexicon-rules.mjs` 里的清洗规则（见第 35 节）；不需要源目录时也可以用 `node scripts/normalize-lexicon.mjs` 就地清洗。
 
 ## 8. 词典服务层
 
@@ -436,8 +436,8 @@ npm run lexicon:validate
 ## 17. 当前测试状态（2026-10-05）
 
 ```text
-Test Files  33
-Tests       167
+Test Files  34
+Tests       184
 ```
 
 测试覆盖：
@@ -880,14 +880,75 @@ PLAYWRIGHT_MODULE=<playwright 包的 index.mjs 文件 URL> node scripts/verify-r
 
 ## 33. 当前可复核性缺口（待办，2026-10-05）
 
-以下问题在 2026-10-05 的接管审计中确认，尚未修复：
+以下问题在 2026-10-05 的接管审计中确认。第 4、7 项已修复（见第 35 节），其余仍未修复：
 
 1. **浏览器验收脚本无法开箱运行**：`scripts/verify-*.mjs` 依赖 `playwright`，但它不在 `package.json`，本机也没有 `node_modules/playwright`。7 个脚本都需要外部 Playwright 与 `PLAYWRIGHT_MODULE`。
 2. **验收证据不入库**：`.gitignore` 忽略 `reports/`，但本说明书 20 多处引用 `reports/*`。全新克隆无法复核任何历史验收结论。
 3. **`supabase/schema.sql` 是过期陷阱**：它缺少 `profiles`/`user_words`/`user_meanings` 三张表，`meaning_review_states` 主键与类型和 `migrations/001` 不一致，`review_records` 缺少 `correct`/`previous_due_at`/`next_due_at`/`response_time_ms`/`created_at`。照它建库会让每次推送以 `PGRST204` 失败。测试只校验 `migrations/`（`supabaseSchema.test.ts`），没有任何守护覆盖该文件。**以 `migrations/` 为准。**
-4. **`npm run lexicon:validate` 在全新克隆上会失败**：它读取被忽略的 `reports/cet6-unmatched.json`。CI（`pages.yml`）也只跑 `npm test` 与构建，不跑该命令。
+4. ~~**`npm run lexicon:validate` 在全新克隆上会失败**：它读取被忽略的 `reports/cet6-unmatched.json`。CI（`pages.yml`）也只跑 `npm test` 与构建，不跑该命令。~~ **已修复（第 35 节）**：未匹配词表改为入库的 `scripts/cet6-unmatched.json`，校验规则扩充并接入 CI。
 5. **提醒链路端到端未实现**：`supabase/functions/send-review-reminders/index.ts` 仍是骨架（`webPush = null`、`fetchDueUsers` 返回 `['demo-user']`、`countDueMeanings` 返回 0、`getSubscriptions` 返回 `[]`）；`cron.sql` 含未替换的 `<PROJECT_REF>` 占位符、缺少 `create extension pg_net/pg_cron`，并使用并非 Vault 读取路径的 `vault.get()`。
 6. **推送深链指向遗留页**：`appUrl()` 默认 `/review/today`，提醒负载也硬编码该地址，而界面主入口是 `/review`。
-7. **词典数据质量**：约 30% 的义项 `partOfSpeech` 为 `other`（`a.` 未被映射），`englishDefinition` 全为空，存在 1 条非中文释义（`ounce` 的 `"Г"`）与 96 条西里尔字母音标。
+7. ~~**词典数据质量**：约 30% 的义项 `partOfSpeech` 为 `other`（`a.` 未被映射），`englishDefinition` 全为空，存在 1 条非中文释义（`ounce` 的 `"Г"`）与 96 条西里尔字母音标。~~ **部分修复（第 35 节）**：映射已补齐、1,816 条重复义项与脏数据已清除、界面不再显示英文 `other`；仍有约 10,401 条义项待用源目录重新生成才能恢复词性。
 
 第 18、19 节列出的既有待办（真机推送、Cron、跨用户 RLS、IELTS 词库）仍然有效。
+
+## 34. 云同步数据安全修复（2026-10-05）
+
+这一节修的是**静默数据丢失**，改动必须一起看，单独修任何一条都会引入新问题。
+
+### 已修复
+
+- **登录用户的复习写入从未进入同步队列。** `srsReviewService.ts` 自己实现了一份写 `syncMeta` 的辅助函数，**没有写 `localOwnerUserId`**；而 `syncMetaRepository.listDirty()` 只返回「owner 等于当前登录用户」的行，所以登录状态下 `review-state:` 与 `review:` 两类标记对同步永远不可见，只有 `word:` / `meaning:` 会同步。更糟的是 Dexie 的 `put` 整行替换，会把 `studySupportRepository` 之前写好的 owner 覆盖掉。现在统一改走 `syncMetaRepository.markDirty()`。
+- **拉取会抹掉本地专有字段。** 云端 `review_records` 没有 `questionType`/`errorType`/`confidence`/`inputValue`/`hintUsed` 这些列，而原来的合并按 id 让远端整条覆盖本地，于是每次拉取都把这些字段清成 `undefined`。此前被上一条掩盖，一旦修好推送就会立刻开始丢数据。现在 `mergeAppendOnlyByIdPreservingLocal()` 只让远端**确实存在**的字段生效，本地专有字段保持不变。
+- **删除永远同步不出去，而且 dirty 被误清。** 原 `push()` 取不到本地行时直接跳过再 `markSynced`，墓碑被丢弃，云端那一行永远留着，下一次拉取就在同一台设备上把刚删掉的单词复活。现在按墓碑走远端 `delete()`；同时 `wordRepository.remove` 会为级联删除的义项与复习记录也写入墓碑，否则它们会在云端变成孤儿并在拉取时回到本地。
+- **义项计数变更不同步。** `correctCount`/`incorrectCount`/`lastReviewedAt` 是云端列，但写入时既不标 dirty 也不更新 `updatedAt`；后者还会让本地行在 last-write-wins 合并中输给远端。现在补齐 `updatedAt` 与 `meaning:` 的 dirty 标记。
+- **拉取没有分页。** 四个 `select` 都是无界单次查询，PostgREST 达到项目 max-rows 就截断，且顺序不确定。现在按各表的真实时间列（`review_records` 只有 `created_at`）加 `id` 稳定排序并分页取完。
+
+### 已知限制
+
+- 删除使用远端硬删除，因此**同一账号的其他设备不会得知这次删除**，会继续保留本地副本。要做到跨设备传播，需要改成软删除（写 `deleted_at`）并保留被删行的最小载荷；目前 `deleted_at` 字段只被拉取方向使用，没有任何代码写入它。同一设备上的「删除后复活」已经修好。
+- 本轮没有把 `settings` 同步到 `profiles`、没有实现提醒函数（见第 33 节第 5 项）。
+
+### 验证
+
+```text
+npm test        34 files / 184 tests passed
+npm run build   passed
+node scripts/verify-sync-safety.mjs
+```
+
+`verify-sync-safety.mjs` 用假的 Supabase 客户端驱动**真实的** `SyncEngine` 与真实 IndexedDB，不发出任何网络请求，覆盖：登录复习产生三条带账号的待同步记录、推送发送复习状态与记录并删除墓碑行、拉取保留专有字段、以及 1200 行完整分页、云端墓碑删除本地行。报告在 `reports/sync-safety/`（不入库）。
+
+## 35. 词典数据质量修复（2026-10-05）
+
+### 根因
+
+`scripts/build-cet6-lexicon.mjs` 的 `normalizePartOfSpeech()` 认识 `adj.`/`adjective`，但**不认识 ECDICT 实际使用的 `a.`**，于是形容词全部落到兜底的 `other`。结果是 40,650 条义项里有 12,218 条（30.06%）词性为 `other`，而 `adj.` 只有 5 条（全部来自手工校对词条）；1,163 个单词的**每一个**义项都是 `other`。词典卡片又把 `partOfSpeech` 原样打印，学习者会直接看到英文单词「other」。
+
+### 已修复
+
+- **映射补齐并抽成可测模块。** 规则移到 `scripts/lexicon-rules.mjs`，补上 `a.`/`ad.`/`art.`/`int.`/`aux.`/`abbr.`，由 `scripts/lexicon-rules.test.mjs` 覆盖。构建脚本改为引用同一模块，因此下次用源目录重新生成时不会再产生这批 `other`。
+- **确定性清洗。** 同一模块的 `applyLexiconHygiene()` 做三件可证明安全的事，不猜测词性：
+  1. 删除既无中文也无拉丁字母的不可读释义（命中 1 条：`ounce` 的 `"Г"`）；
+  2. 删除 `other` 里与**同一个词**已定词性释义完全重复的义项（1,816 条）。真正的多义词（同词不同词性各有独立释义）不受影响；
+  3. 音标里的西里尔同形异码字替换为对应拉丁字符（96 条，含 ә→ə、є→e）。
+  清洗后义项从 40,650 降到 38,833，清洗结果可重复执行且稳定，并已作为构建流程的一步。
+- **界面兜底。** 新增 `src/lib/partOfSpeech.ts` 的 `partOfSpeechLabel()`，词典卡片、词条详情、原地选义面板、候选词建议与复习流程统一用它；未识别词性显示为「其他词性」，不再把英文 `other` 显示给学习者。
+- **校验补盲区并接入 CI。** `validate-lexicon.mjs` 新增：词性取值白名单、`reviewStatus` 取值白名单、空 `senses`、`entry.word` 与 key 一致性、不可读释义、`aliases.json` 反向残留检查；并支持 `--lexicon <path>` 便于验证规则本身。未匹配词表改为入库的 `scripts/cet6-unmatched.json`，因此**全新克隆也能校验**（此前读的是被忽略的 `reports/`，必然失败）。`pages.yml` 增加 `npm run lexicon:validate`。
+
+### 未完成
+
+- **约 10,401 条义项的词性仍是 `other`**，因为 `cet6.json` 在生成时已经丢掉了 `a.` 这样的标记，无法从现有数据反推。恢复它们必须用 `ismartcoding/endict` 源目录重新构建；本次环境中 git clone 被阻断、单文件下载速率约 3.5 KB/s，506 MB 的 `dict/` 无法取得。**没有用「以 的 结尾就当形容词」这类启发式去猜词性**，因为那是伪造语言数据。在源可用时执行 `npm run lexicon:build -- --source <endict>` 即可一次性补齐。
+- `englishDefinition` 仍为 0/40,650（源未提供），类型声明保留但无数据。
+- 音标格式仍不统一（7,632 条为裸 `US|UK`，15 条手工校对值用 `/.../` 包裹）。这只影响显示观感，未改动手工数据。
+
+### 验证
+
+```text
+npm test                34 files / 184 tests passed
+npm run lexicon:validate valid: true（7813 词条 / 38833 义项 / 77 已校对 / 25 未匹配）
+npm run build           首页主脚本 675 KB（gzip 201 KB），词典分块 4,531 KB（gzip 663 KB，比清洗前小 175 KB）
+node scripts/verify-lexicon-quality.mjs
+```
+
+`verify-lexicon-quality.mjs` 需要与正式构建一致的 Pages 预览（`VITE_BASE_PATH=/English-recite/`、`VITE_ROUTER_MODE=hash`），覆盖：未识别词性显示中文兜底名称、`ounce` 脏释义已消失、`absorb` 的重复义项已删除、手机宽度无横向溢出、无未捕获异常；截图在 `reports/lexicon-quality/`。

@@ -15,6 +15,7 @@ import {
   updatePerformanceProfile
 } from '../personalization/personalizationEngine';
 import { getCurrentOwnerUserId } from '../ownership/ownership';
+import { syncMetaRepository } from '../sync/syncMetaRepository';
 import { advanceReviewRun, ratingWithHint, recordsIndependentEvidence, type ReviewRun } from '../../core/reviewRun';
 
 interface ReviewContext {
@@ -97,16 +98,20 @@ async function applyMeaningReview({
     nextDueAt: outcome.nextDueAt,
     reviewedAt
   });
-  await markSyncMetaDirty(`review-state:${meaning.id}`, reviewedAt);
-  await markSyncMetaDirty(`review:${recordId}`, reviewedAt);
+  await markReviewDirty(`review-state:${meaning.id}`, reviewedAt);
+  await markReviewDirty(`review:${recordId}`, reviewedAt);
 
   const current = await db.meanings.get(meaning.id);
   if (current) {
     await db.meanings.update(meaning.id, {
       correctCount: current.correctCount + (rating !== 'again' ? 1 : 0),
       incorrectCount: current.incorrectCount + (rating === 'again' ? 1 : 0),
-      lastReviewedAt: reviewedAt
+      lastReviewedAt: reviewedAt,
+      updatedAt: reviewedAt
     });
+    // Counters are cloud columns too, so they need their own dirty mark; the bump
+    // above also keeps the local row from losing the last-write-wins merge.
+    await markReviewDirty(`meaning:${meaning.id}`, reviewedAt);
   }
 
   const previousProfile = await db.performanceProfiles.get(meaning.id);
@@ -129,17 +134,11 @@ async function applyMeaningReview({
   );
 }
 
-async function markSyncMetaDirty(
-  entityKey: string,
-  updatedAt: number
-): Promise<void> {
-  const existing = await db.syncMeta.get(entityKey);
-  await db.syncMeta.put({
-    entityKey,
-    syncStatus: 'dirty',
-    deletedAt: existing?.deletedAt,
-    updatedAt: Math.max(existing?.updatedAt ?? 0, updatedAt)
-  });
+// Review writes must go through the shared helper: it stamps localOwnerUserId, and
+// syncMetaRepository.listDirty() only returns rows owned by the signed-in user. A
+// local copy that omitted the owner made every signed-in review invisible to sync.
+function markReviewDirty(entityKey: string, updatedAt: number): Promise<void> {
+  return syncMetaRepository.markDirty(entityKey, updatedAt);
 }
 
 export async function submitZhEnReview(input: {
